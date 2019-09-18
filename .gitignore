@@ -109,6 +109,5 @@ project/plugins/project/
 .history
 .cache
 .lib/
-!/.idea/
-!/beginnercourse/.idea/
-!/beginnercourse/beginnercourse.iml
+.idea/
+*.iml
