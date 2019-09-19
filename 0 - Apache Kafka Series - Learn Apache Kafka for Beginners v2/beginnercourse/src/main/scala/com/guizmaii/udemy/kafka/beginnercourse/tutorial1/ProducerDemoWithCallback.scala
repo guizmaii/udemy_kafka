@@ -34,7 +34,7 @@ object ProducerDemoWithCallback extends App {
                  |  - Timestamp: ${metadata.timestamp()}
                  |""".stripMargin
             )
-      }
+        }
     )
   }
   producer.close()

@@ -2,7 +2,7 @@ package com.guizmaii.udemy.kafka.beginnercourse.tutorial1
 
 import java.util.Properties
 
-import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
+import org.apache.kafka.clients.producer.{ KafkaProducer, ProducerConfig, ProducerRecord }
 import org.apache.kafka.common.serialization.StringSerializer
 
 object ProducerDemo extends App {
