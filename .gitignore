@@ -111,3 +111,4 @@ project/plugins/project/
 .lib/
 .idea/
 *.iml
+secrets.conf
