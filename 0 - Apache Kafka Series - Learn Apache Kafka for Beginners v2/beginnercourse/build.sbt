@@ -12,3 +12,5 @@ ThisBuild / scalafmtSbtCheck := true
 libraryDependencies += "org.apache.kafka" % "kafka-clients" % "2.3.0"
 libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.28"
 libraryDependencies += "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0"
+libraryDependencies += "com.github.pureconfig" %% "pureconfig" % "0.12.0"
+libraryDependencies += "com.twitter" % "hbc-core" % "2.2.0"
