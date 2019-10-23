@@ -1,4 +1,4 @@
-#!/bash
+#!/bin/zsh
 
 # download kafka at  https://www.apache.org/dyn/closer.cgi?path=/kafka/0.11.0.1/kafka_2.11-0.11.0.1.tgz
 # extract kafka in a folder
