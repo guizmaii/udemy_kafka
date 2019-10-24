@@ -13,7 +13,7 @@ import org.apache.kafka.streams.scala.kstream.KTable
  *   - https://kafka.apache.org/documentation/streams/developer-guide/dsl-api.html#scala-dsl
  *
  */
-object Main extends App {
+object WordCount extends App {
 
   val config = new Properties
   config.setProperty(StreamsConfig.APPLICATION_ID_CONFIG, "streams-starter-app")
