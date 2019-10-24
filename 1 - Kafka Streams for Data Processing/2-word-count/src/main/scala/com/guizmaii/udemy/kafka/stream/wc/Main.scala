@@ -12,12 +12,6 @@ import org.apache.kafka.streams.scala.kstream.KTable
  * Kafka Stream Scala DSL doc:
  *   - https://kafka.apache.org/documentation/streams/developer-guide/dsl-api.html#scala-dsl
  *
- * Producer console command:
- *   $ kafka-console-producer --broker-list localhost:9092 --topic word-count-input
- *
- * Consumer console command:
- *   $ kafka-console-consumer --bootstrap-server localhost:9092 --topic word-count-output --from-beginning --formatter kafka.tools.DefaultMessageFormatter --property print.key=true --property print.value=true --property key.deserializer=org.apache.kafka.common.serialization.StringDeserializer --property value.deserializer=org.apache.kafka.common.serialization.LongDeserializer
- *
  */
 object Main extends App {
 
