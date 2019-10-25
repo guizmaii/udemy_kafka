@@ -5,12 +5,12 @@ import java.util.Properties
 
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.streams.scala.StreamsBuilder
-import org.apache.kafka.streams.{KafkaStreams, StreamsConfig}
+import org.apache.kafka.streams.{ KafkaStreams, StreamsConfig }
 
 object FavouriteColour extends App {
 
   val config = new Properties
-  config.setProperty(StreamsConfig.APPLICATION_ID_CONFIG, s"favourite-colour-app")
+  config.setProperty(StreamsConfig.APPLICATION_ID_CONFIG, "favourite-colour-app")
   config.setProperty(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092")
   config.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
 
@@ -19,18 +19,22 @@ object FavouriteColour extends App {
 
   val builder = new StreamsBuilder
 
-  builder
-    .stream[String, String](s"favourite-colour-input")
-    .filter((_, colour) => "green" == colour || "red" == colour || "blue" == colour)
-    .selectKey((user, _) => user)
-    .to(s"favourite-color-state")
+  val inputTopic        = "favourite-colour-input"
+  val intermediateTopic = "user-keys-and-colours"
+  val resultTopic       = "favourite-colour-output"
 
   builder
-    .table[String, String](s"user-keys-and-colours")
-      .groupBy((_, colour) => (colour, colour))
-      .count()
-      .toStream
-      .to(s"favourite-colour-output")
+    .stream[String, String](inputTopic)
+    .filter((_, colour) => "green" == colour || "red" == colour || "blue" == colour)
+    .selectKey((user, _) => user)
+    .to(intermediateTopic)
+
+  builder
+    .table[String, String](intermediateTopic)
+    .groupBy((_, colour) => (colour, colour))
+    .count()
+    .toStream
+    .to(resultTopic)
 
   val streams = new KafkaStreams(builder.build(), config)
   streams.cleanUp()
