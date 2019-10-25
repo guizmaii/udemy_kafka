@@ -20,17 +20,11 @@ object FavouriteColour extends App {
   val builder = new StreamsBuilder
 
   val inputTopic        = "favourite-colour-input"
-  val intermediateTopic = "user-keys-and-colours"
   val resultTopic       = "favourite-colour-output"
 
   builder
-    .stream[String, String](inputTopic)
+    .table[String, String](inputTopic)
     .filter((_, colour) => "green" == colour || "red" == colour || "blue" == colour)
-    .selectKey((user, _) => user)
-    .to(intermediateTopic)
-
-  builder
-    .table[String, String](intermediateTopic)
     .groupBy((_, colour) => (colour, colour))
     .count()
     .toStream

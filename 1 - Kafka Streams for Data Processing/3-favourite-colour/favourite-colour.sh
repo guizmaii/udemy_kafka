@@ -3,9 +3,6 @@
 # create input topic with one partition to get full ordering
 kafka-topics --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic favourite-colour-input
 
-# create intermediary log compacted topic
-kafka-topics --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic user-keys-and-colours --config cleanup.policy=compact
-
 # create output log compacted topic
 kafka-topics --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic favourite-colour-output --config cleanup.policy=compact
 
