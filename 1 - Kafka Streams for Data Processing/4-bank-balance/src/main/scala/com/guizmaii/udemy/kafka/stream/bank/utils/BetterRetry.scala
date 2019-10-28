@@ -1,7 +1,6 @@
 package com.guizmaii.udemy.kafka.stream.bank.utils
 
 import cats.Monad
-import cats.effect.IO
 import retry.{ RetryDetails, RetryPolicies, RetryPolicy, Sleep }
 
 import scala.concurrent.duration.FiniteDuration

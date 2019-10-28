@@ -3,29 +3,31 @@ package com.guizmaii.udemy.kafka.stream.bank
 import java.time.{ Duration, Instant }
 import java.util.Properties
 
-import cats.effect.{ ContextShift, Fiber, IO, Resource, Timer }
+import cats.effect.{ ContextShift, IO, Resource, Timer }
 import com.banno.kafka.producer.ProducerApi
 import io.chrisdavenport.log4cats.SelfAwareStructuredLogger
 import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
+import org.apache.kafka.clients.admin.NewTopic
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.{ ProducerRecord, RecordMetadata }
-import org.apache.kafka.streams.{ KafkaStreams, StreamsConfig, Topology }
 import org.apache.kafka.streams.scala.StreamsBuilder
+import org.apache.kafka.streams.{ KafkaStreams, StreamsConfig, Topology }
 
 import scala.concurrent.ExecutionContext.global
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.Random
-import org.apache.kafka.clients.admin.NewTopic
 
 object Main extends App {
 
   import cats.implicits._
   import com.banno.kafka._
   import com.banno.kafka.admin._
+  import io.circe.generic.auto._
+  import io.circe.parser._
+  import io.circe.syntax._
   import retry.CatsEffect._
   import utils.BetterRetry._
-  import io.circe._, io.circe.generic.auto._, io.circe.parser._, io.circe.syntax._
 
   implicit val timer: Timer[IO]      = IO.timer(global)
   implicit val cxt: ContextShift[IO] = IO.contextShift(global)
@@ -80,11 +82,11 @@ object Main extends App {
     c
   }
 
+  import com.goyeau.kafka.streams.circe.CirceSerdes._
   import org.apache.kafka.streams.scala.ImplicitConversions._
   import org.apache.kafka.streams.scala.Serdes._
-  import com.goyeau.kafka.streams.circe.CirceSerdes._
 
-  def sumStream(builder: StreamsBuilder)(implicit logger: SelfAwareStructuredLogger[IO]): IO[Unit] =
+  def sumStream(builder: StreamsBuilder): IO[Unit] =
     IO.delay {
       builder
         .stream[String, String](sourceTopic.name)
