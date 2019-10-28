@@ -111,7 +111,7 @@ object Main extends App {
       builder                                          = new StreamsBuilder
       _                                                <- sumStream(builder)
       stream                                           <- kafkaStreamR(builder.build(), config).use(startStreams).start
-      producer                                         <- producerR.use { implicit p => produceNMessages(n = 3)(maxAmount = 5).retryForeverEvery(30 second) }.start
+      producer                                         <- producerR.use(implicit p => produceNMessages(n = 3)(maxAmount = 5).retryForeverEvery(30 second)).start
       _                                                <- stream.join <*> producer.join
     } yield "Done"
 
