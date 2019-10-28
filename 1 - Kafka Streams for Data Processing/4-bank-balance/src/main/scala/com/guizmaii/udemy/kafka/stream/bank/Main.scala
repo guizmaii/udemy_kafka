@@ -138,7 +138,7 @@ object Main extends App {
       _                                                <- latestUpdateStream(source).map(_.to(latestUpdateTopic.name))
       stream                                           <- kafkaStreamR(builder.build(), config).use(startStreams).start
       producer <- producerR.use { implicit p =>
-                   produceNMessages(numberOfMessagesPerSecond)(maxAmount).retryForeverEvery(produceMessagesEvery)
+                   produceNMessages(numberOfMessagesPerSecond)(maxAmount).repeatForeverEvery(produceMessagesEvery)
                  }.start
       _ <- stream.join <*> producer.join
     } yield "Done"
