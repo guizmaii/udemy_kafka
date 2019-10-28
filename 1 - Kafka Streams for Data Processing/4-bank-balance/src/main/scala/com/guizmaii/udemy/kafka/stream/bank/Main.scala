@@ -3,7 +3,7 @@ package com.guizmaii.udemy.kafka.stream.bank
 import java.time.{ Duration, Instant }
 import java.util.Properties
 
-import cats.effect.{ ContextShift, IO, Resource, Timer }
+import cats.effect.{ ExitCode, IO, IOApp, Resource }
 import com.banno.kafka.producer.ProducerApi
 import io.chrisdavenport.log4cats.SelfAwareStructuredLogger
 import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
@@ -14,19 +14,18 @@ import org.apache.kafka.streams.scala.StreamsBuilder
 import org.apache.kafka.streams.scala.kstream.KStream
 import org.apache.kafka.streams.{ KafkaStreams, StreamsConfig, Topology }
 
-import scala.concurrent.ExecutionContext.global
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.Random
 
-object Main extends App {
+object Main extends IOApp {
 
   /**
    * Program variables
    */
-  val numberOfMessagesPerSecond = 3
-  val maxAmount                 = 5
-  val produceMessagesEvery      = 5 seconds
+  val messagesPerSecond    = 3
+  val maxAmount            = 5
+  val produceMessagesEvery = 5 seconds
 
   import cats.implicits._
   import com.banno.kafka._
@@ -34,9 +33,6 @@ object Main extends App {
   import io.circe.generic.auto._
   import retry.CatsEffect._
   import utils.RetryOps._
-
-  implicit val timer: Timer[IO]      = IO.timer(global)
-  implicit val cxt: ContextShift[IO] = IO.contextShift(global)
 
   val customers = List(
     "John",
@@ -125,20 +121,22 @@ object Main extends App {
   def startStreams(streams: KafkaStreams): IO[Nothing] =
     IO.delay(streams.cleanUp()) *> IO.delay(streams.start()) *> IO.never
 
-  val program =
-    for {
-      implicit0(logger: SelfAwareStructuredLogger[IO]) <- Slf4jLogger.create[IO]
-      _                                                <- AdminApi.createTopicsIdempotent[IO](bootstrapServers.bs, sourceTopic :: sumTopic :: latestUpdateTopic :: Nil)
-      builder                                          = new StreamsBuilder
-      source                                           <- sourceStream(builder)
-      _                                                <- sumStream(source).map(_.to(sumTopic.name))
-      _                                                <- latestUpdateStream(source).map(_.to(latestUpdateTopic.name))
-      stream                                           <- kafkaStreamR(builder.build(), config).use(startStreams).start
-      producer <- producerR.use { implicit p =>
-                   produceNMessages(numberOfMessagesPerSecond)(maxAmount).repeatForeverEvery(produceMessagesEvery)
-                 }.start
-      _ <- stream.join <*> producer.join
-    } yield "Done"
+  override def run(args: List[String]): IO[ExitCode] = {
+    val program =
+      for {
+        implicit0(logger: SelfAwareStructuredLogger[IO]) <- Slf4jLogger.create[IO]
+        _                                                <- AdminApi.createTopicsIdempotent[IO](bootstrapServers.bs, List(sourceTopic, sumTopic, latestUpdateTopic))
+        builder                                          = new StreamsBuilder
+        source                                           <- sourceStream(builder)
+        _                                                <- sumStream(source).map(_.to(sumTopic.name))
+        _                                                <- latestUpdateStream(source).map(_.to(latestUpdateTopic.name))
+        stream                                           <- kafkaStreamR(builder.build(), config).use(startStreams).start
+        producer <- producerR.use { implicit p =>
+                     produceNMessages(messagesPerSecond)(maxAmount).repeatForeverEvery(produceMessagesEvery)
+                   }.start
+        _ <- stream.join <*> producer.join
+      } yield "Done"
 
-  program.unsafeRunSync()
+    program.as(ExitCode.Success)
+  }
 }
