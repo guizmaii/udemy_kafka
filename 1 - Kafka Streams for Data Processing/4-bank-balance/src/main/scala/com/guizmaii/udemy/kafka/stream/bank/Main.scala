@@ -66,9 +66,9 @@ object Main extends App {
   def produceNMessages(n: Int)(maxAmount: Int)(implicit p: ProducerApi[IO, String, String]): IO[List[RecordMetadata]] =
     for {
       messages <- List.fill(n)(newMessage(maxAmount)).sequence
-      records = messages.map(
-        m => new ProducerRecord(sourceTopic.name, m.asJson.noSpaces): ProducerRecord[String, String]
-      )
+      records = messages.map { m =>
+        new ProducerRecord(sourceTopic.name, m.asJson.noSpaces): ProducerRecord[String, String]
+      }
       res <- records.traverse(p.sendAsync)
     } yield res
 
