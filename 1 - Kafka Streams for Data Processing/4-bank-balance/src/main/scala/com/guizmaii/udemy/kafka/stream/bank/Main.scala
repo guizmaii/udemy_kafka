@@ -32,7 +32,6 @@ object Main extends App {
   import com.banno.kafka._
   import com.banno.kafka.admin._
   import io.circe.generic.auto._
-  import io.circe.syntax._
   import retry.CatsEffect._
   import utils.RetryOps._
 
@@ -64,20 +63,22 @@ object Main extends App {
   val latestUpdateTopic = new NewTopic("bank-balance-latest-update-topic", 1, 1)
   val bootstrapServers  = BootstrapServers("localhost:9092")
 
-  val producerR: Resource[IO, ProducerApi[IO, String, String]] =
+  import com.goyeau.kafka.streams.circe.CirceSerdes._
+  import org.apache.kafka.streams.scala.ImplicitConversions._
+  import org.apache.kafka.streams.scala.Serdes._
+
+  val producerR: Resource[IO, ProducerApi[IO, String, Message]] =
     ProducerApi
-      .resource[IO, String, String](
+      .resource[IO, String, Message](
         bootstrapServers,
         ClientId("bank-balance-producer")
       )
 
-  def produceNMessages(n: Int)(maxAmount: Int)(implicit p: ProducerApi[IO, String, String]): IO[List[RecordMetadata]] =
+  def produceNMessages(n: Int)(maxAmount: Int)(implicit p: ProducerApi[IO, String, Message]): IO[List[RecordMetadata]] =
     for {
       messages <- List.fill(n)(newMessage(maxAmount)).sequence
-      records = messages.map { m =>
-        new ProducerRecord(sourceTopic.name, m.asJson.noSpaces): ProducerRecord[String, String]
-      }
-      res <- records.traverse(p.sendAsync)
+      records  = messages.map(m => new ProducerRecord(sourceTopic.name, m): ProducerRecord[String, Message]) // This ugly explicit type is required because ProducerRecord is a Java class with a Java API...
+      res      <- records.traverse(p.sendAsync)
     } yield res
 
   val config = {
@@ -88,10 +89,6 @@ object Main extends App {
     c.setProperty(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE)
     c
   }
-
-  import com.goyeau.kafka.streams.circe.CirceSerdes._
-  import org.apache.kafka.streams.scala.ImplicitConversions._
-  import org.apache.kafka.streams.scala.Serdes._
 
   def sourceStream(builder: StreamsBuilder): IO[KStream[String, Message]] =
     IO.delay(builder.stream[String, Message](sourceTopic.name))
