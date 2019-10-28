@@ -24,7 +24,6 @@ object Main extends App {
   import com.banno.kafka._
   import com.banno.kafka.admin._
   import io.circe.generic.auto._
-  import io.circe.parser._
   import io.circe.syntax._
   import retry.CatsEffect._
   import utils.BetterRetry._
@@ -89,8 +88,7 @@ object Main extends App {
   def sumStream(builder: StreamsBuilder): IO[Unit] =
     IO.delay {
       builder
-        .stream[String, String](sourceTopic.name)
-        .map((k, m: String) => k -> decode[Message](m).right.get)
+        .stream[String, Message](sourceTopic.name)
         .selectKey((_, m) => m.name)
         .groupByKey
         .aggregate(0L)((_, m, acc) => acc + m.amount)
