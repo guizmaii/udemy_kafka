@@ -11,6 +11,7 @@ import org.apache.kafka.clients.admin.NewTopic
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.{ ProducerRecord, RecordMetadata }
 import org.apache.kafka.streams.scala.StreamsBuilder
+import org.apache.kafka.streams.scala.kstream.KStream
 import org.apache.kafka.streams.{ KafkaStreams, StreamsConfig, Topology }
 
 import scala.concurrent.ExecutionContext.global
@@ -19,6 +20,13 @@ import scala.language.postfixOps
 import scala.util.Random
 
 object Main extends App {
+
+  /**
+   * Program variables
+   */
+  val numberOfMessagesPerSecond = 3
+  val maxAmount                 = 5
+  val produceMessagesEvery      = 5 seconds
 
   import cats.implicits._
   import com.banno.kafka._
@@ -51,15 +59,15 @@ object Main extends App {
       )
     }
 
-  val sourceTopic           = new NewTopic("bank-balance-source-topic-0", 1, 1)
-  val sumTopic              = new NewTopic("bank-balance-sum-topic-0", 1, 1)
-  val maxTopic              = new NewTopic("bank-balance-max-topic-0", 1, 1)
-  val kafkaBootstrapServers = BootstrapServers("localhost:9092")
+  val sourceTopic       = new NewTopic("bank-balance-source-topic", 1, 1)
+  val sumTopic          = new NewTopic("bank-balance-sum-topic", 1, 1)
+  val latestUpdateTopic = new NewTopic("bank-balance-latest-update-topic", 1, 1)
+  val bootstrapServers  = BootstrapServers("localhost:9092")
 
   val producerR: Resource[IO, ProducerApi[IO, String, String]] =
     ProducerApi
       .resource[IO, String, String](
-        kafkaBootstrapServers,
+        bootstrapServers,
         ClientId("bank-balance-producer")
       )
 
@@ -74,8 +82,8 @@ object Main extends App {
 
   val config = {
     val c = new Properties
-    c.setProperty(StreamsConfig.APPLICATION_ID_CONFIG, "bank-balance-stream-0")
-    c.setProperty(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaBootstrapServers.bs)
+    c.setProperty(StreamsConfig.APPLICATION_ID_CONFIG, "bank-balance-stream")
+    c.setProperty(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers.bs)
     c.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
     c.setProperty(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE)
     c
@@ -85,15 +93,31 @@ object Main extends App {
   import org.apache.kafka.streams.scala.ImplicitConversions._
   import org.apache.kafka.streams.scala.Serdes._
 
-  def sumStream(builder: StreamsBuilder): IO[Unit] =
+  def sourceStream(builder: StreamsBuilder): IO[KStream[String, Message]] =
+    IO.delay(builder.stream[String, Message](sourceTopic.name))
+
+  def sumStream(source: KStream[String, Message]): IO[KStream[String, Long]] =
     IO.delay {
-      builder
-        .stream[String, Message](sourceTopic.name)
+      source
         .selectKey((_, m) => m.name)
         .groupByKey
         .aggregate(0L)((_, m, acc) => acc + m.amount)
         .toStream
-        .to(sumTopic.name)
+    }
+
+  def latestUpdateStream(source: KStream[String, Message]): IO[KStream[String, Instant]] =
+    IO.delay {
+      source
+        .selectKey((_, m) => m.name)
+        .groupByKey
+        .aggregate(Instant.MIN) { (_, m, acc) =>
+          acc.compareTo(m.time) match {
+            case 0          => acc
+            case i if i < 0 => m.time
+            case i if i > 0 => acc
+          }
+        }
+        .toStream
     }
 
   def kafkaStreamR(topology: Topology, props: Properties): Resource[IO, KafkaStreams] =
@@ -107,12 +131,16 @@ object Main extends App {
   val program =
     for {
       implicit0(logger: SelfAwareStructuredLogger[IO]) <- Slf4jLogger.create[IO]
-      _                                                <- AdminApi.createTopicsIdempotent[IO](kafkaBootstrapServers.bs, sourceTopic :: sumTopic :: maxTopic :: Nil)
+      _                                                <- AdminApi.createTopicsIdempotent[IO](bootstrapServers.bs, sourceTopic :: sumTopic :: latestUpdateTopic :: Nil)
       builder                                          = new StreamsBuilder
-      _                                                <- sumStream(builder)
+      source                                           <- sourceStream(builder)
+      _                                                <- sumStream(source).map(_.to(sumTopic.name))
+      _                                                <- latestUpdateStream(source).map(_.to(latestUpdateTopic.name))
       stream                                           <- kafkaStreamR(builder.build(), config).use(startStreams).start
-      producer                                         <- producerR.use(implicit p => produceNMessages(n = 3)(maxAmount = 5).retryForeverEvery(30 second)).start
-      _                                                <- stream.join <*> producer.join
+      producer <- producerR.use { implicit p =>
+                   produceNMessages(numberOfMessagesPerSecond)(maxAmount).retryForeverEvery(produceMessagesEvery)
+                 }.start
+      _ <- stream.join <*> producer.join
     } yield "Done"
 
   program.unsafeRunSync()
