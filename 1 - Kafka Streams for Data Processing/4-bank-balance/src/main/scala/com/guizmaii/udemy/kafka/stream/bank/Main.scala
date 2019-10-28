@@ -41,11 +41,11 @@ object Main extends App {
 
   final case class Message(name: String, amount: Int, time: Instant)
 
-  val newMessage =
+  def newMessage(maxAmount: Int) =
     IO.delay {
       Message(
         name = customers(Random.nextInt(customers.length)),
-        amount = Random.nextInt(100),
+        amount = Random.nextInt(maxAmount),
         time = Instant.now()
       )
     }
@@ -62,9 +62,9 @@ object Main extends App {
         ClientId("bank-balance-producer")
       )
 
-  def produceNMessages(n: Int)(p: ProducerApi[IO, String, String]): IO[List[RecordMetadata]] =
+  def produceNMessages(n: Int)(maxAmount: Int)(implicit p: ProducerApi[IO, String, String]): IO[List[RecordMetadata]] =
     for {
-      messages <- List.fill(n)(newMessage).sequence
+      messages <- List.fill(n)(newMessage(maxAmount)).sequence
       records = messages.map(
         m => new ProducerRecord(sourceTopic.name, m.asJson.noSpaces): ProducerRecord[String, String]
       )
@@ -111,7 +111,7 @@ object Main extends App {
       builder                                          = new StreamsBuilder
       _                                                <- sumStream(builder)
       stream                                           <- kafkaStreamR(builder.build(), config).use(startStreams).start
-      producer                                         <- producerR.use(p => retryForeverEvery(30 second)(produceNMessages(3)(p))).start
+      producer                                         <- producerR.use { implicit p => produceNMessages(n = 3)(maxAmount = 5).retryForeverEvery(30 second) }.start
       _                                                <- stream.join <*> producer.join
     } yield "Done"
 

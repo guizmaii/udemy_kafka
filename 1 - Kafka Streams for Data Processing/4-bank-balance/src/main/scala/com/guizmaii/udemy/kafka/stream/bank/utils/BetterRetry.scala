@@ -1,11 +1,10 @@
 package com.guizmaii.udemy.kafka.stream.bank.utils
 
 import cats.Monad
-import retry.{RetryDetails, RetryPolicies, RetryPolicy, Sleep}
+import cats.effect.IO
+import retry.{ RetryDetails, RetryPolicies, RetryPolicy, Sleep }
 
 import scala.concurrent.duration.FiniteDuration
-
-
 
 object BetterRetry {
 
@@ -20,7 +19,9 @@ object BetterRetry {
     onFailure: (A, RetryDetails) => M[Unit]
   ): M[A] = retry.retryingM(policy, wasSuccessful, onFailure)(action)
 
-  def retryForeverEvery[M[_]: Monad: Sleep, A](duration: FiniteDuration)(action: => M[A]): M[A] =
-    retryingM(action)(RetryPolicies.constantDelay(duration), _ => false, (_, _) => Monad[M].unit)
+  implicit final class RetryOps[M[_], A](private val io: M[A]) extends AnyVal {
+    def retryForeverEvery(every: FiniteDuration)(implicit M: Monad[M], S: Sleep[M]): M[A] =
+      retryingM(io)(RetryPolicies.constantDelay(every), _ => false, (_, _) => Monad[M].unit)
+  }
 
 }
