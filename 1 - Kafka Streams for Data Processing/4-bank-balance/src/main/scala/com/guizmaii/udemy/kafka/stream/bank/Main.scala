@@ -54,10 +54,11 @@ object Main extends IOApp {
       )
     }
 
-  val sourceTopic       = new NewTopic("bank-balance-source-topic", 1, 1)
-  val sumTopic          = new NewTopic("bank-balance-sum-topic", 1, 1)
-  val latestUpdateTopic = new NewTopic("bank-balance-latest-update-topic", 1, 1)
-  val bootstrapServers  = BootstrapServers("localhost:9092")
+  val sourceTopic            = new NewTopic("bank-balance-source-topic", 1, 1)
+  val sumTopic               = new NewTopic("bank-balance-sum-topic", 1, 1)
+  val transactionsCountTopic = new NewTopic("bank-balance-transactions-count-topic", 1, 1)
+  val latestUpdateTopic      = new NewTopic("bank-balance-latest-update-topic", 1, 1)
+  val bootstrapServers       = BootstrapServers("localhost:9092")
 
   import com.goyeau.kafka.streams.circe.CirceSerdes._
   import org.apache.kafka.streams.scala.ImplicitConversions._
@@ -92,16 +93,17 @@ object Main extends IOApp {
 
   def sumStream(source: KStream[String, Message]): IO[KStream[String, Long]] =
     IO.delay {
-      source
-        .groupByKey
+      source.groupByKey
         .aggregate(0L)((_, m, acc) => acc + m.amount)
         .toStream
     }
 
+  def transactionsCountStream(source: KStream[String, Message]): IO[KStream[String, Long]] =
+    IO.delay { source.groupByKey.count().toStream }
+
   def latestUpdateStream(source: KStream[String, Message]): IO[KStream[String, Instant]] =
     IO.delay {
-      source
-        .groupByKey
+      source.groupByKey
         .aggregate(Instant.MIN) { (_, m, acc) =>
           acc.compareTo(m.time) match {
             case 0          => acc
@@ -124,10 +126,12 @@ object Main extends IOApp {
     val program =
       for {
         implicit0(logger: SelfAwareStructuredLogger[IO]) <- Slf4jLogger.create[IO]
-        _                                                <- AdminApi.createTopicsIdempotent[IO](bootstrapServers.bs, List(sourceTopic, sumTopic, latestUpdateTopic))
+        topics                                           = List(sourceTopic, sumTopic, transactionsCountTopic, latestUpdateTopic)
+        _                                                <- AdminApi.createTopicsIdempotent[IO](bootstrapServers.bs, topics)
         builder                                          = new StreamsBuilder
         source                                           <- sourceStream(builder)
         _                                                <- sumStream(source).map(_.to(sumTopic.name))
+        _                                                <- transactionsCountStream(source).map(_.to(transactionsCountTopic.name))
         _                                                <- latestUpdateStream(source).map(_.to(latestUpdateTopic.name))
         stream                                           <- kafkaStreamR(builder.build(), config).use(startStreams).start
         producer <- producerR.use { implicit p =>
