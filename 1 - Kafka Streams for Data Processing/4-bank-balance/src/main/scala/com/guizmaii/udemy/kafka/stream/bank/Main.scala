@@ -101,17 +101,18 @@ object Main extends App {
       IO.delay(s.close(Duration.ofSeconds(10))).void
     }
 
+  def startStreams(streams: KafkaStreams): IO[Nothing] =
+    IO.delay(streams.cleanUp()) *> IO.delay(streams.start()) *> IO.never
+
   val program =
     for {
       implicit0(logger: SelfAwareStructuredLogger[IO]) <- Slf4jLogger.create[IO]
       _                                                <- AdminApi.createTopicsIdempotent[IO](kafkaBootstrapServers.bs, sourceTopic :: sumTopic :: maxTopc :: Nil)
       builder                                          = new StreamsBuilder
       _                                                <- sumStream(builder)
-      stream <- kafkaStreamR(builder.build(), config)
-                 .use(s => IO.delay(s.cleanUp()) *> IO.delay(s.start()) *> IO.never)
-                 .start
-      producer <- producerR.use(p => retryForeverEvery(30 second)(produceNMessages(3)(p))).start
-      _        <- stream.join <*> producer.join
+      stream                                           <- kafkaStreamR(builder.build(), config).use(startStreams).start
+      producer                                         <- producerR.use(p => retryForeverEvery(30 second)(produceNMessages(3)(p))).start
+      _                                                <- stream.join <*> producer.join
     } yield "Done"
 
   program.unsafeRunSync()
