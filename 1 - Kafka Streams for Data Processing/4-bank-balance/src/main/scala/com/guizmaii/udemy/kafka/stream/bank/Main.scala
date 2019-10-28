@@ -71,5 +71,4 @@ object Main extends App {
     } yield r
 
   program.unsafeRunSync()
-
 }
