@@ -97,8 +97,8 @@ object Main extends App {
     }
 
   def kafkaStreamR(topology: Topology, props: Properties): Resource[IO, KafkaStreams] =
-    Resource.make { IO.delay(new KafkaStreams(topology, props)) } { s =>
-      IO.delay(s.close(Duration.ofSeconds(10))).void
+    Resource.make { IO.delay(new KafkaStreams(topology, props)) } { streams =>
+      IO.delay(streams.close(Duration.ofSeconds(10))).void
     }
 
   def startStreams(streams: KafkaStreams): IO[Nothing] =
