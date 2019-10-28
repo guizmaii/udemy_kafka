@@ -3,11 +3,11 @@ package com.guizmaii.udemy.kafka.stream.bank
 import java.time.Instant
 import java.util.Properties
 
-import cats.effect.{IO, Resource, Timer}
+import cats.effect.{ IO, Resource, Timer }
 import com.banno.kafka.producer.ProducerApi
 import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
 import org.apache.kafka.clients.consumer.ConsumerConfig
-import org.apache.kafka.clients.producer.{ProducerRecord, RecordMetadata}
+import org.apache.kafka.clients.producer.{ ProducerRecord, RecordMetadata }
 import org.apache.kafka.streams.StreamsConfig
 
 import scala.concurrent.ExecutionContext.global
@@ -28,14 +28,16 @@ object Main extends App {
     "Robert"
   )
 
-  def unsafeMessage =
-    s"""
-       |{
-       |  "name": ${customers(Random.nextInt(customers.length))},
-       |  "amount": ${Random.nextInt(Int.MaxValue)},
-       |  "time": ${Instant.now()}
-       |}
-       |""".stripMargin
+  val newMessage =
+    IO.delay {
+      s"""
+         |{
+         |  "name": ${customers(Random.nextInt(customers.length))},
+         |  "amount": ${Random.nextInt(Int.MaxValue)},
+         |  "time": ${Instant.now()}
+         |}
+         |""".stripMargin
+    }
 
   val config = new Properties
   config.setProperty(StreamsConfig.APPLICATION_ID_CONFIG, "bank-balance-app")
@@ -51,26 +53,28 @@ object Main extends App {
   import retry.CatsEffect._
   import utils.BetterRetry._
 
-  val sourceTopic: NewTopic = new NewTopic("bank-balance-source-topic", 1, 1)
-  val kafkaBootstrapServers = "localhost:9092"
+  val sourceTopic           = new NewTopic("bank-balance-source-topic", 1, 1)
+  val kafkaBootstrapServers = BootstrapServers("localhost:9092")
 
   val producer: Resource[IO, ProducerApi[IO, String, String]] =
     ProducerApi
       .resource[IO, String, String](
-        BootstrapServers(kafkaBootstrapServers),
+        kafkaBootstrapServers,
         ClientId("bank-balance-producer")
       )
 
   def produceOneHundredMessage(p: ProducerApi[IO, String, String]): IO[List[RecordMetadata]] =
-    List
-      .fill(100)(new ProducerRecord(sourceTopic.name, unsafeMessage): ProducerRecord[String, String])
-      .traverse(p.sendAsync)
+    for {
+      messages <- List.fill(100)(newMessage).sequence
+      records  = messages.map(m => new ProducerRecord(sourceTopic.name, m): ProducerRecord[String, String])
+      res      <- records.traverse(p.sendAsync)
+    } yield res
 
   val program =
     for {
       logger <- Slf4jLogger.create[IO]
-      _ <- AdminApi.createTopicsIdempotent[IO](kafkaBootstrapServers, sourceTopic :: Nil)
-      r <- producer.use(p => retryForeverEvery(produceOneHundredMessage(p), 3 second))
+      _      <- AdminApi.createTopicsIdempotent[IO](kafkaBootstrapServers.bs, sourceTopic :: Nil)
+      r      <- producer.use(p => retryForeverEvery(produceOneHundredMessage(p), 3 second))
     } yield r
 
   program.unsafeRunSync()
