@@ -17,6 +17,13 @@ import scala.util.Random
 
 object Main extends App {
 
+  import cats.implicits._
+  import com.banno.kafka._
+  import com.banno.kafka.admin._
+  import org.apache.kafka.clients.admin.NewTopic
+  import retry.CatsEffect._
+  import utils.BetterRetry._
+
   implicit val timer: Timer[IO] = IO.timer(global)
 
   val customers = List(
@@ -38,20 +45,6 @@ object Main extends App {
          |}
          |""".stripMargin
     }
-
-  val config = new Properties
-  config.setProperty(StreamsConfig.APPLICATION_ID_CONFIG, "bank-balance-app")
-  config.setProperty(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092")
-  config.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
-
-  config.setProperty(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE)
-
-  import cats.implicits._
-  import com.banno.kafka._
-  import com.banno.kafka.admin._
-  import org.apache.kafka.clients.admin.NewTopic
-  import retry.CatsEffect._
-  import utils.BetterRetry._
 
   val sourceTopic           = new NewTopic("bank-balance-source-topic", 1, 1)
   val kafkaBootstrapServers = BootstrapServers("localhost:9092")
@@ -78,4 +71,5 @@ object Main extends App {
     } yield r
 
   program.unsafeRunSync()
+
 }
