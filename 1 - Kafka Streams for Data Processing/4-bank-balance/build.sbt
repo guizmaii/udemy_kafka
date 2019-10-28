@@ -39,6 +39,6 @@ resolvers += "confluent" at "https://packages.confluent.io/maven/"
 addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
 
 disableScalacFlag("-Ywarn-dead-code")
-disableScalacFlag("-Xfatal-warnings")
+//disableScalacFlag("-Xfatal-warnings")
 
 def disableScalacFlag(flag: String) = scalacOptions := scalacOptions.value.filter(_ != flag)
