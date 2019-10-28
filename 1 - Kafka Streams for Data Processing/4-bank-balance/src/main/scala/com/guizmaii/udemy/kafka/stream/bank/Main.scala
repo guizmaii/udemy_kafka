@@ -84,7 +84,7 @@ object Main extends App {
   import org.apache.kafka.streams.scala.Serdes._
   import com.goyeau.kafka.streams.circe.CirceSerdes._
 
-  def initSumStream(builder: StreamsBuilder)(implicit logger: SelfAwareStructuredLogger[IO]): IO[Unit] =
+  def sumStream(builder: StreamsBuilder)(implicit logger: SelfAwareStructuredLogger[IO]): IO[Unit] =
     IO.delay {
       builder
         .stream[String, String](sourceTopic.name)
@@ -106,7 +106,7 @@ object Main extends App {
       implicit0(logger: SelfAwareStructuredLogger[IO]) <- Slf4jLogger.create[IO]
       _                                                <- AdminApi.createTopicsIdempotent[IO](kafkaBootstrapServers.bs, sourceTopic :: sumTopic :: maxTopc :: Nil)
       builder                                          = new StreamsBuilder
-      _                                                <- initSumStream(builder)
+      _                                                <- sumStream(builder)
       stream <- kafkaStreamR(builder.build(), config)
                  .use(s => IO.delay(s.cleanUp()) *> IO.delay(s.start()) *> IO.never)
                  .start
