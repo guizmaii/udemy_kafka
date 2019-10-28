@@ -52,7 +52,7 @@ object Main extends App {
 
   val sourceTopic           = new NewTopic("bank-balance-source-topic-0", 1, 1)
   val sumTopic              = new NewTopic("bank-balance-sum-topic-0", 1, 1)
-  val maxTopc               = new NewTopic("bank-balance-max-topic-0", 1, 1)
+  val maxTopic              = new NewTopic("bank-balance-max-topic-0", 1, 1)
   val kafkaBootstrapServers = BootstrapServers("localhost:9092")
 
   val producerR: Resource[IO, ProducerApi[IO, String, String]] =
@@ -107,7 +107,7 @@ object Main extends App {
   val program =
     for {
       implicit0(logger: SelfAwareStructuredLogger[IO]) <- Slf4jLogger.create[IO]
-      _                                                <- AdminApi.createTopicsIdempotent[IO](kafkaBootstrapServers.bs, sourceTopic :: sumTopic :: maxTopc :: Nil)
+      _                                                <- AdminApi.createTopicsIdempotent[IO](kafkaBootstrapServers.bs, sourceTopic :: sumTopic :: maxTopic :: Nil)
       builder                                          = new StreamsBuilder
       _                                                <- sumStream(builder)
       stream                                           <- kafkaStreamR(builder.build(), config).use(startStreams).start
