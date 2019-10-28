@@ -67,7 +67,8 @@ object Main extends IOApp {
     ProducerApi
       .resource[IO, String, Message](
         bootstrapServers,
-        ClientId("bank-balance-producer")
+        ClientId("bank-balance-producer"),
+        EnableIdempotence(true)
       )
 
   def produceNMessages(n: Int)(maxAmount: Int)(implicit p: ProducerApi[IO, String, Message]): IO[List[RecordMetadata]] =
