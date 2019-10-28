@@ -20,7 +20,7 @@ object BetterRetry {
     onFailure: (A, RetryDetails) => M[Unit]
   ): M[A] = retry.retryingM(policy, wasSuccessful, onFailure)(action)
 
-  def retryForeverEvery[M[_]: Monad: Sleep, A](action: => M[A], duration: FiniteDuration): M[A] =
+  def retryForeverEvery[M[_]: Monad: Sleep, A](duration: FiniteDuration)(action: => M[A]): M[A] =
     retryingM(action)(RetryPolicies.constantDelay(duration), _ => false, (_, _) => Monad[M].unit)
 
 }
