@@ -34,7 +34,7 @@ object Main extends App {
   import io.circe.generic.auto._
   import io.circe.syntax._
   import retry.CatsEffect._
-  import utils.BetterRetry._
+  import utils.RetryOps._
 
   implicit val timer: Timer[IO]      = IO.timer(global)
   implicit val cxt: ContextShift[IO] = IO.contextShift(global)
