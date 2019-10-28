@@ -73,7 +73,7 @@ object Main extends IOApp {
   def produceNMessages(n: Int)(maxAmount: Int)(implicit p: ProducerApi[IO, String, Message]): IO[List[RecordMetadata]] =
     for {
       messages <- List.fill(n)(newMessage(maxAmount)).sequence
-      records  = messages.map(m => new ProducerRecord(sourceTopic.name, m): ProducerRecord[String, Message]) // This ugly explicit type is required because ProducerRecord is a Java class with a Java API...
+      records  = messages.map(m => new ProducerRecord(sourceTopic.name, m.name, m))
       res      <- records.traverse(p.sendAsync)
     } yield res
 
@@ -92,7 +92,6 @@ object Main extends IOApp {
   def sumStream(source: KStream[String, Message]): IO[KStream[String, Long]] =
     IO.delay {
       source
-        .selectKey((_, m) => m.name)
         .groupByKey
         .aggregate(0L)((_, m, acc) => acc + m.amount)
         .toStream
@@ -101,7 +100,6 @@ object Main extends IOApp {
   def latestUpdateStream(source: KStream[String, Message]): IO[KStream[String, Instant]] =
     IO.delay {
       source
-        .selectKey((_, m) => m.name)
         .groupByKey
         .aggregate(Instant.MIN) { (_, m, acc) =>
           acc.compareTo(m.time) match {
