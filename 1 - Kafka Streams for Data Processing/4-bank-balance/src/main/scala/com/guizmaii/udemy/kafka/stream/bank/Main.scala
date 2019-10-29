@@ -10,8 +10,8 @@ import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
 import org.apache.kafka.clients.admin.NewTopic
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
-import org.apache.kafka.streams.scala.StreamsBuilder
-import org.apache.kafka.streams.scala.kstream.{ KStream, KTable }
+import org.apache.kafka.streams.scala.kstream.{ KStream, KTable, Materialized }
+import org.apache.kafka.streams.scala.{ ByteArrayKeyValueStore, StreamsBuilder }
 import org.apache.kafka.streams.{ KafkaStreams, StreamsConfig, Topology }
 
 import scala.concurrent.duration._
@@ -33,6 +33,7 @@ object Main extends IOApp {
   import io.circe.generic.auto._
   import retry.CatsEffect._
   import utils.RetryOps._
+  import utils.KTableOps._
 
   val customers = List(
     "John",
@@ -44,6 +45,7 @@ object Main extends IOApp {
   )
 
   final case class Message(name: String, amount: Int, time: Instant)
+  final case class FinalResult(name: String, totalAmount: Long, transactionCount: Long, lastUpdated: Instant)
 
   def newMessage(maxAmount: Int) =
     IO.delay {
@@ -58,6 +60,7 @@ object Main extends IOApp {
   val sumTopic               = new NewTopic("bank-balance-sum-topic", 1, 1)
   val transactionsCountTopic = new NewTopic("bank-balance-transactions-count-topic", 1, 1)
   val latestUpdateTopic      = new NewTopic("bank-balance-latest-update-topic", 1, 1)
+  val finalResultTopic       = new NewTopic("bank-balance-final-result-topic", 1, 1)
   val bootstrapServers       = BootstrapServers("localhost:9092")
 
   import com.goyeau.kafka.streams.circe.CirceSerdes._
@@ -107,6 +110,43 @@ object Main extends IOApp {
         }
     }
 
+  /**
+   * I don't understand yet why but if I don't use these `Materialized.as[...]("...")` in the `.join` calls,
+   * when I produce N messages in the "source" stream, then the "final results" stream will contains N*N messages.
+   *
+   * So, to deduplicate these N*N messages, I found this `Materialized.as[...]("...")` solution by reading the Kafka tests here:
+   *
+   *   https://github.com/confluentinc/kafka-streams-examples/blob/aefdc2fa3fe820709b069685021728e7775b1788/src/test/java/io/confluent/examples/streams/TableToTableJoinIntegrationTest.java
+   *
+   * And, I don't know why but I need to explicitly type these `Materialized.as[...]("...")` calls, which is annoying and ugly.
+   */
+  def finalResultStream(
+    sumStream: KTable[String, Long],
+    transactionsCountStream: KTable[String, Long],
+    latestUpdateStream: KTable[String, Instant]
+  ): IO[KTable[String, FinalResult]] =
+    IO.delay {
+      sumStream
+        .join(
+          transactionsCountStream,
+          Materialized.as[String, (Long, Long), ByteArrayKeyValueStore]("sum-count-store")
+        )((sum, count) => sum -> count)
+        .join(
+          latestUpdateStream,
+          Materialized.as[String, (Long, Long, Instant), ByteArrayKeyValueStore]("sum-count-lastUpdate-store")
+        ) { case ((sum, count), lastUpdate) => (sum, count, lastUpdate) }
+        .mapValues({
+            case (name, (sum, count, lastUpdate)) =>
+              FinalResult(
+                name = name,
+                totalAmount = sum,
+                transactionCount = count,
+                lastUpdated = lastUpdate
+              )
+          }: (String, (Long, Long, Instant)) => FinalResult // Apparently, I need to explicitly type the anonymous function here because, without, Scala doesn't know which overloaded method it should use. Ugly but it's the fault of the Kafka-stream-scala API design.
+        )
+    }
+
   def kafkaStreamR(topology: Topology, props: Properties): Resource[IO, KafkaStreams] =
     Resource.make { IO.delay(new KafkaStreams(topology, props)) } { streams =>
       IO.delay(streams.close(Duration.ofSeconds(10))).void
@@ -123,9 +163,10 @@ object Main extends IOApp {
         _                                                <- AdminApi.createTopicsIdempotent[IO](bootstrapServers.bs, topics)
         builder                                          = new StreamsBuilder
         source                                           <- sourceStream(builder)
-        _                                                <- sumStream(source).map(_.toStream.to(sumTopic.name))
-        _                                                <- transactionsCountStream(source).map(_.toStream.to(transactionsCountTopic.name))
-        _                                                <- latestUpdateStream(source).map(_.toStream.to(latestUpdateTopic.name))
+        sum                                              <- sumStream(source).flatMap(_.to(sumTopic))
+        count                                            <- transactionsCountStream(source).flatMap(_.to(transactionsCountTopic))
+        latest                                           <- latestUpdateStream(source).flatMap(_.to(latestUpdateTopic))
+        _                                                <- finalResultStream(sum, count, latest).flatMap(_.to(finalResultTopic))
         stream                                           <- kafkaStreamR(builder.build(), config).use(startStreams).start
         producer <- producerR.use { producer =>
                      val produceRecords =
