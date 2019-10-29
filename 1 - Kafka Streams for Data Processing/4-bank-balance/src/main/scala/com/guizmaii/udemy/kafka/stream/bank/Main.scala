@@ -143,7 +143,7 @@ object Main extends IOApp {
                 transactionCount = count,
                 lastUpdated = lastUpdate
               )
-          }: (String, (Long, Long, Instant)) => FinalResult // Apparently, I need to explicitly type the anonymous function here because, without, Scala doesn't know which overloaded method it should use. Ugly but it's the fault of the Kafka-stream-scala API design.
+          }: (String, (Long, Long, Instant)) => FinalResult // Apparently, I need to explicitly type the anonymous function here because, without, Scala doesn't know which overloaded method it should use. Ugly.
         )
     }
 
