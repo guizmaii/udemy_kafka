@@ -112,7 +112,7 @@ object Main extends IOApp {
 
   /**
    * I don't understand yet why but if I don't use these `Materialized.as[...]("...")` in the `.join` calls,
-   * when I produce N messages in the "source" stream, then the "final results" stream will contains N*N messages.
+   * when I produce N messages (with distinc keys, to be precise) in the "source" stream, then the "final results" stream will contains N*3 messages.
    *
    * So, to deduplicate these N*N messages, I found this `Materialized.as[...]("...")` solution by reading the Kafka tests here:
    *
