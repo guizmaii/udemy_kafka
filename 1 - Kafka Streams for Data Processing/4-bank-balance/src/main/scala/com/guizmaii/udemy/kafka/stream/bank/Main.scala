@@ -9,7 +9,7 @@ import io.chrisdavenport.log4cats.SelfAwareStructuredLogger
 import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
 import org.apache.kafka.clients.admin.NewTopic
 import org.apache.kafka.clients.consumer.ConsumerConfig
-import org.apache.kafka.clients.producer.{ ProducerRecord, RecordMetadata }
+import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.streams.scala.StreamsBuilder
 import org.apache.kafka.streams.scala.kstream.KStream
 import org.apache.kafka.streams.{ KafkaStreams, StreamsConfig, Topology }
@@ -72,12 +72,10 @@ object Main extends IOApp {
         EnableIdempotence(true)
       )
 
-  def produceNMessages(n: Int)(maxAmount: Int)(implicit p: ProducerApi[IO, String, Message]): IO[List[RecordMetadata]] =
+  def generateNProducerRecords(n: Int)(maxAmount: Int): IO[List[ProducerRecord[String, Message]]] =
     for {
       messages <- List.fill(n)(newMessage(maxAmount)).sequence
-      records  = messages.map(m => new ProducerRecord(sourceTopic.name, m.name, m))
-      res      <- records.traverse(p.sendAsync)
-    } yield res
+    } yield messages.map(m => new ProducerRecord(sourceTopic.name, m.name, m))
 
   val config = {
     val c = new Properties
@@ -134,8 +132,14 @@ object Main extends IOApp {
         _                                                <- transactionsCountStream(source).map(_.to(transactionsCountTopic.name))
         _                                                <- latestUpdateStream(source).map(_.to(latestUpdateTopic.name))
         stream                                           <- kafkaStreamR(builder.build(), config).use(startStreams).start
-        producer <- producerR.use { implicit p =>
-                     produceNMessages(messagesPerSecond)(maxAmount).repeatForeverEvery(produceMessagesEvery)
+        producer <- producerR.use { producer =>
+                     val produceRecords =
+                       for {
+                         records <- generateNProducerRecords(messagesPerSecond)(maxAmount)
+                         res     <- records.traverse(producer.sendAsync)
+                       } yield res
+
+                     produceRecords.repeatForeverEvery(produceMessagesEvery)
                    }.start
         _ <- stream.join <*> producer.join
       } yield "Done"
