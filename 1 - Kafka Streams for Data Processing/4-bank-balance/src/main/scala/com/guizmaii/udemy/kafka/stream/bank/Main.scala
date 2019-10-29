@@ -90,7 +90,7 @@ object Main extends IOApp {
   }
 
   def sourceStream(builder: StreamsBuilder): IO[KStream[String, Message]] =
-    IO.delay(builder.stream[String, Message](sourceTopic.name))
+    IO.delay { builder.stream[String, Message](sourceTopic.name) }
 
   def sumStream(source: KStream[String, Message]): IO[KTable[String, Long]] =
     IO.delay { source.groupByKey.aggregate(0L)((_, m, acc) => acc + m.amount) }
