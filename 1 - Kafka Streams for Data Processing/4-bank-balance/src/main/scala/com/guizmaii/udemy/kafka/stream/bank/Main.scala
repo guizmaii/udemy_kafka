@@ -11,7 +11,7 @@ import org.apache.kafka.clients.admin.NewTopic
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.streams.scala.StreamsBuilder
-import org.apache.kafka.streams.scala.kstream.KStream
+import org.apache.kafka.streams.scala.kstream.{ KStream, KTable }
 import org.apache.kafka.streams.{ KafkaStreams, StreamsConfig, Topology }
 
 import scala.concurrent.duration._
@@ -89,17 +89,13 @@ object Main extends IOApp {
   def sourceStream(builder: StreamsBuilder): IO[KStream[String, Message]] =
     IO.delay(builder.stream[String, Message](sourceTopic.name))
 
-  def sumStream(source: KStream[String, Message]): IO[KStream[String, Long]] =
-    IO.delay {
-      source.groupByKey
-        .aggregate(0L)((_, m, acc) => acc + m.amount)
-        .toStream
-    }
+  def sumStream(source: KStream[String, Message]): IO[KTable[String, Long]] =
+    IO.delay { source.groupByKey.aggregate(0L)((_, m, acc) => acc + m.amount) }
 
-  def transactionsCountStream(source: KStream[String, Message]): IO[KStream[String, Long]] =
-    IO.delay { source.groupByKey.count().toStream }
+  def transactionsCountStream(source: KStream[String, Message]): IO[KTable[String, Long]] =
+    IO.delay { source.groupByKey.count() }
 
-  def latestUpdateStream(source: KStream[String, Message]): IO[KStream[String, Instant]] =
+  def latestUpdateStream(source: KStream[String, Message]): IO[KTable[String, Instant]] =
     IO.delay {
       source.groupByKey
         .aggregate(Instant.MIN) { (_, m, acc) =>
@@ -109,7 +105,6 @@ object Main extends IOApp {
             case i if i > 0 => acc
           }
         }
-        .toStream
     }
 
   def kafkaStreamR(topology: Topology, props: Properties): Resource[IO, KafkaStreams] =
@@ -128,9 +123,9 @@ object Main extends IOApp {
         _                                                <- AdminApi.createTopicsIdempotent[IO](bootstrapServers.bs, topics)
         builder                                          = new StreamsBuilder
         source                                           <- sourceStream(builder)
-        _                                                <- sumStream(source).map(_.to(sumTopic.name))
-        _                                                <- transactionsCountStream(source).map(_.to(transactionsCountTopic.name))
-        _                                                <- latestUpdateStream(source).map(_.to(latestUpdateTopic.name))
+        _                                                <- sumStream(source).map(_.toStream.to(sumTopic.name))
+        _                                                <- transactionsCountStream(source).map(_.toStream.to(transactionsCountTopic.name))
+        _                                                <- latestUpdateStream(source).map(_.toStream.to(latestUpdateTopic.name))
         stream                                           <- kafkaStreamR(builder.build(), config).use(startStreams).start
         producer <- producerR.use { producer =>
                      val produceRecords =
