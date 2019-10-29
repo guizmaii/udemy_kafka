@@ -112,9 +112,9 @@ object Main extends IOApp {
 
   /**
    * I don't understand yet why but if I don't use these `Materialized.as[...]("...")` in the `.join` calls,
-   * when I produce N messages (with distinc keys, to be precise) in the "source" stream, then the "final results" stream will contains N*3 messages.
+   * when I produce N messages (with distinc keys, to be precise) in the "source" stream, then the "final results" stream will contains N * 3 messages.
    *
-   * So, to deduplicate these N*N messages, I found this `Materialized.as[...]("...")` solution by reading the Kafka tests here:
+   * So, to deduplicate these N * 3 messages, I found this `Materialized.as[...]("...")` solution by reading the Kafka tests here:
    *
    *   https://github.com/confluentinc/kafka-streams-examples/blob/aefdc2fa3fe820709b069685021728e7775b1788/src/test/java/io/confluent/examples/streams/TableToTableJoinIntegrationTest.java
    *
