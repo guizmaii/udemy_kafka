@@ -4,10 +4,17 @@ version := "0.1"
 
 scalaVersion := "2.12.10"
 
-libraryDependencies += "org.apache.kafka" %% "kafka-streams-scala" % "2.3.1"
-libraryDependencies += "org.slf4j"        % "slf4j-simple"         % "1.7.28"
-libraryDependencies += "com.banno"        %% "kafka4s"             % "2.1.0-M20"
-libraryDependencies += "com.goyeau"       %% "kafka-streams-circe" % "0.5"
+libraryDependencies += "org.slf4j"     % "slf4j-simple"         % "1.7.28"
+libraryDependencies += "com.banno"     %% "kafka4s"             % "3.0.0-M1"
+libraryDependencies += "org.scalatest" %% "scalatest"           % "3.0.8" % Test
+
+libraryDependencies ++= (
+  (version: String) =>
+    Seq(
+      "org.apache.kafka" %% "kafka-streams-scala"     % version,
+      "org.apache.kafka" % "kafka-streams-test-utils" % version % Test
+    )
+  )("2.3.1")
 
 libraryDependencies ++= (
   (version: String) =>
