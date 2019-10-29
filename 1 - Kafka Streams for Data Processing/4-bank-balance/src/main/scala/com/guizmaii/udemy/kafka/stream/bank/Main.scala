@@ -32,8 +32,8 @@ object Main extends IOApp {
   import com.banno.kafka.admin._
   import io.circe.generic.auto._
   import retry.CatsEffect._
-  import utils.RetryOps._
   import utils.KTableOps._
+  import utils.RetryOps._
 
   val customers = List(
     "John",
