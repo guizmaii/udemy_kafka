@@ -10,7 +10,7 @@ import org.apache.kafka.common.serialization.{Deserializer, Serde, Serdes, Seria
 /**
  * Comes from here: https://github.com/joan38/kafka-streams-circe
  *
- * TODO: Remove this code when this PR is merged: https://github.com/joan38/kafka-streams-circe/pull/2
+ * TODO: Remove this code when this PR is merged: https://github.com/joan38/kafka-streams-circe/pull/4
  */
 trait CirceSerdes {
   import io.circe.syntax._
