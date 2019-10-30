@@ -10,7 +10,7 @@ import org.apache.kafka.common.serialization.{ Deserializer, Serializer }
 import org.apache.kafka.streams.scala.StreamsBuilder
 import org.apache.kafka.streams.test.ConsumerRecordFactory
 import org.apache.kafka.streams.{ Topology, TopologyTestDriver }
-import org.scalatest.{ Assertion, FreeSpec, Matchers }
+import org.scalatest.{ FreeSpec, Matchers }
 
 object Helpers {
   implicit final class ConsumerRecordFactoryOps[K, V](private val factory: ConsumerRecordFactory[K, V]) extends AnyVal {
@@ -42,43 +42,74 @@ class MainTests extends FreeSpec with Matchers {
     "is true" in { true should be(true) }
   }
 
-  "Sum Stream" - {
-    "sums the, grouped by key, Message amounts" in {
+  /*
 
-      def test(topology: Topology): IO[Assertion] =
-        topologyTestDriverR(topology).use { testDriver =>
-          IO.delay {
-            val factory: ConsumerRecordFactory[String, Message] = ConsumerRecordFactory(sourceTopic)
+    - 1 input topic
+    - n input key/messages
 
-            val key = "key"
-            val anotherKey = "anotherKey"
-            val m_0 = Message(name = "Jules", amount = 2, time = Instant.MAX)
-            val m_1 = Message(name = "Jules", amount = 6, time = Instant.MAX)
-            val m_2 = Message(name = "Jules", amount = 3, time = Instant.MAX)
-            val m_3 = Message(name = "Jules", amount = 8, time = Instant.MAX)
+    - 1 output topic
+    - n expected records
 
-            testDriver.pipeInput(factory.make(key, m_0))
-            testDriver.pipeInput(factory.make(key, m_1))
-            testDriver.pipeInput(factory.make(anotherKey, m_2))
-            testDriver.pipeInput(factory.make(anotherKey, m_3))
+    - a topology
 
-            testDriver.read[String, Long](sumTopic).value() should be(m_0.amount)
-            testDriver.read[String, Long](sumTopic).value() should be(m_0.amount + m_1.amount)
-            testDriver.read[String, Long](sumTopic).value() should be(m_2.amount)
-            testDriver.read[String, Long](sumTopic).value() should be(m_2.amount + m_3.amount)
-          }
+   */
+
+  trait Producer[K, V] {
+    def produce(k: K, v: V): Unit
+  }
+
+  trait Consumer[K, V] {
+    def consume(): ProducerRecord[K, V]
+  }
+
+  def testStream[InputKey: Serializer, InputValue: Serializer, OutputKey: Deserializer, OutputValue: Deserializer, T](
+    topology: Topology
+  )(
+    inputTopic: NewTopic,
+    outputTopic: NewTopic
+  )(test: (Producer[InputKey, InputValue], Consumer[OutputKey, OutputValue]) => T): T =
+    topologyTestDriverR(topology).use { testDriver =>
+      IO.delay {
+        val factory = ConsumerRecordFactory[InputKey, InputValue](inputTopic)
+
+        val producer = new Producer[InputKey, InputValue] {
+          override def produce(k: InputKey, v: InputValue): Unit = testDriver.pipeInput(factory.make(k, v))
+        }
+        val consumer = new Consumer[OutputKey, OutputValue] {
+          override def consume(): ProducerRecord[OutputKey, OutputValue] =
+            testDriver.read[OutputKey, OutputValue](outputTopic)
         }
 
+        test(producer, consumer)
+      }
+    }.unsafeRunSync()
+
+  "Sum Stream" - {
+    "sums the, grouped by key, Message amounts" in {
       val builder = new StreamsBuilder
 
-      val program =
-        for {
-          source <- sourceStream(builder)
-          _      <- sumStream(source).flatMap(_.to(sumTopic))
-          res    <- test(builder.build)
-        } yield res
+      for {
+        source <- sourceStream(builder)
+        _      <- sumStream(source).flatMap(_.to(sumTopic))
+      } yield testStream(builder.build)(sourceTopic, sumTopic) {
+        (producer: Producer[String, Message], consumer: Consumer[String, Long]) =>
+          val key        = "key"
+          val anotherKey = "anotherKey"
+          val m_0        = Message(name = "Jules", amount = 2, time = Instant.MAX)
+          val m_1        = Message(name = "Jules", amount = 6, time = Instant.MAX)
+          val m_2        = Message(name = "Jules", amount = 3, time = Instant.MAX)
+          val m_3        = Message(name = "Jules", amount = 8, time = Instant.MAX)
 
-      program.unsafeRunSync()
+          producer.produce(key, m_0)
+          producer.produce(key, m_1)
+          producer.produce(anotherKey, m_2)
+          producer.produce(anotherKey, m_3)
+
+          consumer.consume().value() should be(m_0.amount)
+          consumer.consume().value() should be(m_0.amount + m_1.amount)
+          consumer.consume().value() should be(m_2.amount)
+          consumer.consume().value() should be(m_2.amount + m_3.amount)
+      }
     }
   }
 
