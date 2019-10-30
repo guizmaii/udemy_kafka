@@ -9,9 +9,9 @@ object KTableOps {
 
   import cats.implicits._
 
-  implicit final class KTableOps[K, V](private val kable: KTable[K, V]) extends AnyVal {
+  implicit final class KTableOps[K, V](private val ktable: KTable[K, V]) extends AnyVal {
     def to(topic: NewTopic)(implicit P: Produced[K, V]): IO[KTable[K, V]] =
-      IO.delay { kable.toStream.to(topic.name) } *> kable.pure[IO]
+      IO.delay { ktable.toStream.to(topic.name) } *> ktable.pure[IO]
   }
 
 }
