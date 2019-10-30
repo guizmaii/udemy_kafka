@@ -50,13 +50,22 @@ class MainTests extends FreeSpec with Matchers {
           IO.delay {
             val factory: ConsumerRecordFactory[String, Message] = ConsumerRecordFactory(sourceTopic)
 
-            val jules = Message(name = "Jules", amount = 2, time = Instant.MAX)
+            val key = "key"
+            val anotherKey = "anotherKey"
+            val m_0 = Message(name = "Jules", amount = 2, time = Instant.MAX)
+            val m_1 = Message(name = "Jules", amount = 6, time = Instant.MAX)
+            val m_2 = Message(name = "Jules", amount = 3, time = Instant.MAX)
+            val m_3 = Message(name = "Jules", amount = 8, time = Instant.MAX)
 
-            testDriver.pipeInput(factory.make(jules.name, jules))
+            testDriver.pipeInput(factory.make(key, m_0))
+            testDriver.pipeInput(factory.make(key, m_1))
+            testDriver.pipeInput(factory.make(anotherKey, m_2))
+            testDriver.pipeInput(factory.make(anotherKey, m_3))
 
-            val result: ProducerRecord[String, Long] = testDriver.read[String, Long](sumTopic)
-
-            result.value() should be(2)
+            testDriver.read[String, Long](sumTopic).value() should be(m_0.amount)
+            testDriver.read[String, Long](sumTopic).value() should be(m_0.amount + m_1.amount)
+            testDriver.read[String, Long](sumTopic).value() should be(m_2.amount)
+            testDriver.read[String, Long](sumTopic).value() should be(m_2.amount + m_3.amount)
           }
         }
 
