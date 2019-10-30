@@ -2,35 +2,41 @@ package com.guizmaii.udemy.kafka.stream.bank
 
 import java.time.Instant
 
-import cats.effect.IO
-import net.manub.embeddedkafka.streams.EmbeddedKafkaStreamsAllInOne
+import cats.effect.{ IO, Resource }
 import org.apache.kafka.clients.admin.NewTopic
 import org.apache.kafka.clients.consumer.ConsumerRecord
-import org.apache.kafka.common.serialization.Serializer
-import org.apache.kafka.streams.Topology
+import org.apache.kafka.clients.producer.ProducerRecord
+import org.apache.kafka.common.serialization.{ Deserializer, Serializer }
 import org.apache.kafka.streams.scala.StreamsBuilder
-import org.scalatest.{ FreeSpec, Matchers }
+import org.apache.kafka.streams.test.ConsumerRecordFactory
+import org.apache.kafka.streams.{ Topology, TopologyTestDriver }
+import org.scalatest.{ Assertion, FreeSpec, Matchers }
 
-class MainTests extends FreeSpec with Matchers with EmbeddedKafkaStreamsAllInOne {
+object Helpers {
+  implicit final class ConsumerRecordFactoryOps[K, V](private val factory: ConsumerRecordFactory[K, V]) extends AnyVal {
+    def make(k: K, v: V): ConsumerRecord[Array[Byte], Array[Byte]] = factory.create(k, v)
+  }
 
-  def runStreams[V](topics: List[NewTopic], topology: Topology)(block: => V): V =
-    runStreams(topics.map(_.name), topology)(block)
+  implicit final class TopologyTestDriverOps(private val topologyTestDriver: TopologyTestDriver) extends AnyVal {
+    def read[K: Deserializer, V: Deserializer](topic: NewTopic): ProducerRecord[K, V] =
+      topologyTestDriver.readOutput(topic.name, implicitly[Deserializer[K]], implicitly[Deserializer[V]])
+  }
+}
 
-  def publishToKafka[K: Serializer, V: Serializer](topic: NewTopic, key: K, message: V): Unit =
-    publishToKafka(topic.name, key, message)
+class MainTests extends FreeSpec with Matchers {
 
+  import Helpers._
   import Main._
   import io.circe.generic.auto._
-  import net.manub.embeddedkafka.Codecs._
-  import net.manub.embeddedkafka.ConsumerExtensions._
   import org.apache.kafka.streams.scala.ImplicitConversions._
-  import org.apache.kafka.streams.scala.Serdes._
-  import utils.CirceSerdes._
+  import utils.KTableOps._
+  import utils.KafkaSerdesWithCirceSerdes._
 
-  /**
-   * TODO: Why this is not in the `embeddedkafka` lib?
-   */
-  implicit def valueCrDecoder[A]: ConsumerRecord[String, A] => (String, A) = record => record.key() -> record.value()
+  def ConsumerRecordFactory[K: Serializer, V: Serializer](topic: NewTopic): ConsumerRecordFactory[K, V] =
+    new ConsumerRecordFactory[K, V](topic.name, implicitly[Serializer[K]], implicitly[Serializer[V]])
+
+  def topologyTestDriverR(topology: Topology): Resource[IO, TopologyTestDriver] =
+    Resource.fromAutoCloseable(IO.delay { new TopologyTestDriver(topology, config) })
 
   "true" - {
     "is true" in { true should be(true) }
@@ -38,31 +44,32 @@ class MainTests extends FreeSpec with Matchers with EmbeddedKafkaStreamsAllInOne
 
   "Sum Stream" - {
     "sums the, grouped by key, Message amounts" in {
-      val builder = new StreamsBuilder
 
-      val resultTopic = "sum-result-topic"
-      val source      = sourceStream(builder)
-      val sum =
-        source
-          .flatMap(sumStream)
-          .map(_.toStream.peek((k, v) => println(s"============================ $k -> $v")).to(resultTopic))
+      def test(topology: Topology): IO[Assertion] =
+        topologyTestDriverR(topology).use { testDriver =>
+          IO.delay {
+            val factory: ConsumerRecordFactory[String, Message] = ConsumerRecordFactory(sourceTopic)
 
-      val tests = IO.delay {
-        runStreams(List(sourceTopic.name, resultTopic), builder.build()) {
+            val jules = Message(name = "Jules", amount = 2, time = Instant.MAX)
 
-          val jules = Message(name = "Jules", amount = 1, Instant.MAX)
+            testDriver.pipeInput(factory.make(jules.name, jules))
 
-          publishToKafka(sourceTopic, jules.name, jules)
+            val result: ProducerRecord[String, Long] = testDriver.read[String, Long](sumTopic)
 
-          withConsumer[String, String, Unit] { consumer =>
-            val sumStream: Stream[(String, String)] = consumer.consumeLazily(resultTopic)
-
-            sumStream.take(1) should not be empty
+            result.value() should be(2)
           }
         }
-      }
 
-      sum.flatMap(_ => tests).unsafeRunSync()
+      val builder = new StreamsBuilder
+
+      val program =
+        for {
+          source <- sourceStream(builder)
+          _      <- sumStream(source).flatMap(_.to(sumTopic))
+          res    <- test(builder.build)
+        } yield res
+
+      program.unsafeRunSync()
     }
   }
 

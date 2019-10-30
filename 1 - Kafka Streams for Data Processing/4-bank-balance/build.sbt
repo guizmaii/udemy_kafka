@@ -13,7 +13,6 @@ libraryDependencies ++= (
     Seq(
       "org.apache.kafka"        %% "kafka-streams-scala"     % version,
       "org.apache.kafka"        % "kafka-streams-test-utils" % version % Test,
-      "io.github.embeddedkafka" %% "embedded-kafka-streams"  % version % Test
     )
   )("2.3.1")
 
