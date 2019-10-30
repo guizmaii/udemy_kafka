@@ -93,7 +93,7 @@ object Main extends IOApp {
     IO.delay { builder.stream[String, Message](sourceTopic.name) }
 
   def sumStream(source: KStream[String, Message]): IO[KTable[String, Long]] =
-    IO.delay { source.groupByKey.aggregate(0L)((_, m, acc) => acc + m.amount) }
+    IO.delay { source.peek((k, v) => println(s"--------------------- $k -> $v")).groupByKey.aggregate(0L)((_, m, acc) => acc + m.amount) }
 
   def transactionsCountStream(source: KStream[String, Message]): IO[KTable[String, Long]] =
     IO.delay { source.groupByKey.count() }
