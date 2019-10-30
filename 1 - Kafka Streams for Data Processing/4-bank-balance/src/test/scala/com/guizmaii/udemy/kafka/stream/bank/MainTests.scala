@@ -21,13 +21,13 @@ class MainTests extends FreeSpec with Matchers {
   }
 
   "Sum Stream" - {
-    "sums the, grouped by key, Message amounts" in {
-      def topology(builder: StreamsBuilder): IO[Topology] =
-        for {
-          source <- sourceStream(builder)
-          _      <- sumStream(source).flatMap(_.to(sumTopic))
-        } yield builder.build()
+    def topology(builder: StreamsBuilder): IO[Topology] =
+      for {
+        source <- sourceStream(builder)
+        _      <- sumStream(source).flatMap(_.to(sumTopic))
+      } yield builder.build()
 
+    "sums the, grouped by key, Message amounts" in {
       testStream(topology)(sourceTopic, sumTopic) {
         (producer: Producer[String, Message], consumer: Consumer[String, Long]) =>
           val key        = "key"
