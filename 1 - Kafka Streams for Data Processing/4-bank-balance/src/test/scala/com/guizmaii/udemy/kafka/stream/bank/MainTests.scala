@@ -27,7 +27,7 @@ class MainTests extends FreeSpec with Matchers {
         _      <- sumStream(source).flatMap(_.to(sumTopic))
       } yield builder.build()
 
-    "sums the, grouped by key, Message amounts" in {
+    "sums the, grouped by key, Messages amounts" in {
       testStream(topology)(sourceTopic, sumTopic) {
         (producer: Producer[String, Message], consumer: Consumer[String, Long]) =>
           val key        = "key"
