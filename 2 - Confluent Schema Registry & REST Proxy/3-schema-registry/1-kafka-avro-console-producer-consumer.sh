@@ -2,7 +2,7 @@
 
 # change 127.0.0.1 by your Docker ADV_HOST  
 # Get the command line from:
-docker run --net=host -it confluentinc/cp-schema-registry:3.3.0 bash
+docker run --net=host -it confluentinc/cp-schema-registry:5.3.1 bash
 
 # Or download the Confluent Binaries at https://www.confluent.io/download/
 # And add them to your PATH
