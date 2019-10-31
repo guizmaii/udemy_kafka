@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/bin/zsh
+
 # change 127.0.0.1 by your Docker ADV_HOST  
 # Get the command line from:
 docker run --net=host -it confluentinc/cp-schema-registry:3.3.0 bash
