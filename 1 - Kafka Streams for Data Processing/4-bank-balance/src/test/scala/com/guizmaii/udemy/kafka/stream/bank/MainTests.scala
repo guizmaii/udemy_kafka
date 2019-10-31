@@ -84,15 +84,17 @@ class MainTests extends FreeSpec with Matchers {
         producer.produce(sourceTopic)(key_B, m_3)
         producer.produce(sourceTopic)(key_A, m_1)
 
-        consumer.consume(outputTopic).keyAndValue should be(key_A -> 1)
-        consumer.consume(outputTopic).keyAndValue should be(key_A -> 2)
-        consumer.consume(outputTopic).keyAndValue should be(key_B -> 1)
-        consumer.consume(outputTopic).keyAndValue should be(key_B -> 2)
-        consumer.consume(outputTopic).keyAndValue should be(key_B -> 3)
-        consumer.consume(outputTopic).keyAndValue should be(key_B -> 4)
-        consumer.consume(outputTopic).keyAndValue should be(key_B -> 5)
-        consumer.consume(outputTopic).keyAndValue should be(key_A -> 3)
-        consumer.consume(outputTopic) should be(null) // Assert that I consumed all the messages
+        def next() = consumer.consume(outputTopic)
+
+        next().keyAndValue should be(key_A -> 1)
+        next().keyAndValue should be(key_A -> 2)
+        next().keyAndValue should be(key_B -> 1)
+        next().keyAndValue should be(key_B -> 2)
+        next().keyAndValue should be(key_B -> 3)
+        next().keyAndValue should be(key_B -> 4)
+        next().keyAndValue should be(key_B -> 5)
+        next().keyAndValue should be(key_A -> 3)
+        next()             should be(null) // Assert that I consumed all the messages
       }
     }
   }
@@ -124,15 +126,17 @@ class MainTests extends FreeSpec with Matchers {
         producer.produce(sourceTopic)(key_B, m_2)
         producer.produce(sourceTopic)(key_A, m_0)
 
-        consumer.consume(outputTopic).keyAndValue should be(key_A -> m_0.time)
-        consumer.consume(outputTopic).keyAndValue should be(key_A -> m_1.time)
-        consumer.consume(outputTopic).keyAndValue should be(key_B -> m_2.time)
-        consumer.consume(outputTopic).keyAndValue should be(key_B -> m_3.time)
-        consumer.consume(outputTopic).keyAndValue should be(key_B -> m_3.time)
-        consumer.consume(outputTopic).keyAndValue should be(key_B -> m_3.time)
-        consumer.consume(outputTopic).keyAndValue should be(key_B -> m_2.time)
-        consumer.consume(outputTopic).keyAndValue should be(key_A -> m_0.time)
-        consumer.consume(outputTopic) should be(null) // Assert that I consumed all the messages
+        def next() = consumer.consume(outputTopic)
+
+        next().keyAndValue should be(key_A -> m_0.time)
+        next().keyAndValue should be(key_A -> m_1.time)
+        next().keyAndValue should be(key_B -> m_2.time)
+        next().keyAndValue should be(key_B -> m_3.time)
+        next().keyAndValue should be(key_B -> m_3.time)
+        next().keyAndValue should be(key_B -> m_3.time)
+        next().keyAndValue should be(key_B -> m_2.time)
+        next().keyAndValue should be(key_A -> m_0.time)
+        next()             should be(null) // Assert that I consumed all the messages
       }
     }
   }
@@ -167,16 +171,18 @@ class MainTests extends FreeSpec with Matchers {
         producer.produce(sourceTopic)(key_B, m_2)
         producer.produce(sourceTopic)(key_A, m_0)
 
+        def next() = consumer.consume(outputTopic)
+
         // format: off
-        consumer.consume(outputTopic).keyAndValue should be(key_A -> FinalResult(totalAmount = m_0.amount,                      transactionCount = 1, lastUpdated = m_0.time))
-        consumer.consume(outputTopic).keyAndValue should be(key_A -> FinalResult(totalAmount = m_0.amount + m_1.amount,         transactionCount = 2, lastUpdated = m_1.time))
-        consumer.consume(outputTopic).keyAndValue should be(key_B -> FinalResult(totalAmount = m_2.amount,                      transactionCount = 1, lastUpdated = m_2.time))
-        consumer.consume(outputTopic).keyAndValue should be(key_B -> FinalResult(totalAmount = m_2.amount + m_3.amount,         transactionCount = 2, lastUpdated = m_3.time))
-        consumer.consume(outputTopic).keyAndValue should be(key_B -> FinalResult(totalAmount = m_2.amount + m_3.amount * 2,     transactionCount = 3, lastUpdated = m_3.time))
-        consumer.consume(outputTopic).keyAndValue should be(key_B -> FinalResult(totalAmount = m_2.amount + m_3.amount * 3,     transactionCount = 4, lastUpdated = m_3.time))
-        consumer.consume(outputTopic).keyAndValue should be(key_B -> FinalResult(totalAmount = m_2.amount * 2 + m_3.amount * 3, transactionCount = 5, lastUpdated = m_2.time))
-        consumer.consume(outputTopic).keyAndValue should be(key_A -> FinalResult(totalAmount = m_0.amount * 2 + m_1.amount,     transactionCount = 3, lastUpdated = m_0.time))
-        consumer.consume(outputTopic) should be(null) // Assert that I consumed all the messages
+        next().keyAndValue should be(key_A -> FinalResult(totalAmount = m_0.amount,                      transactionCount = 1, lastUpdated = m_0.time))
+        next().keyAndValue should be(key_A -> FinalResult(totalAmount = m_0.amount + m_1.amount,         transactionCount = 2, lastUpdated = m_1.time))
+        next().keyAndValue should be(key_B -> FinalResult(totalAmount = m_2.amount,                      transactionCount = 1, lastUpdated = m_2.time))
+        next().keyAndValue should be(key_B -> FinalResult(totalAmount = m_2.amount + m_3.amount,         transactionCount = 2, lastUpdated = m_3.time))
+        next().keyAndValue should be(key_B -> FinalResult(totalAmount = m_2.amount + m_3.amount * 2,     transactionCount = 3, lastUpdated = m_3.time))
+        next().keyAndValue should be(key_B -> FinalResult(totalAmount = m_2.amount + m_3.amount * 3,     transactionCount = 4, lastUpdated = m_3.time))
+        next().keyAndValue should be(key_B -> FinalResult(totalAmount = m_2.amount * 2 + m_3.amount * 3, transactionCount = 5, lastUpdated = m_2.time))
+        next().keyAndValue should be(key_A -> FinalResult(totalAmount = m_0.amount * 2 + m_1.amount,     transactionCount = 3, lastUpdated = m_0.time))
+        next()             should be(null) // Assert that I consumed all the messages
         // format: on
       }
     }
