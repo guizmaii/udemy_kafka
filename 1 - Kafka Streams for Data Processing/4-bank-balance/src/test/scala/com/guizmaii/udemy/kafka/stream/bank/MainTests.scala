@@ -40,11 +40,13 @@ class MainTests extends FreeSpec with Matchers {
         producer.produce(sourceTopic)(key, m_1)
         producer.produce(sourceTopic)(anotherKey, m_2)
         producer.produce(sourceTopic)(anotherKey, m_3)
+        producer.produce(sourceTopic)(key, m_1)
 
         consumer.consume(sumTopic).value() should be(m_0.amount)
         consumer.consume(sumTopic).value() should be(m_0.amount + m_1.amount)
         consumer.consume(sumTopic).value() should be(m_2.amount)
         consumer.consume(sumTopic).value() should be(m_2.amount + m_3.amount)
+        consumer.consume(sumTopic).value() should be(m_0.amount + m_1.amount * 2)
       }
     }
   }
