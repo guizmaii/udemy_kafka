@@ -72,6 +72,7 @@ class MainTests extends FreeSpec with Matchers {
         producer.produce(sourceTopic)(anotherKey, m_3)
         producer.produce(sourceTopic)(anotherKey, m_3)
         producer.produce(sourceTopic)(anotherKey, m_3)
+        producer.produce(sourceTopic)(key, m_1)
 
         consumer.consume(transactionsCountTopic).value() should be(1)
         consumer.consume(transactionsCountTopic).value() should be(2)
@@ -80,6 +81,7 @@ class MainTests extends FreeSpec with Matchers {
         consumer.consume(transactionsCountTopic).value() should be(3)
         consumer.consume(transactionsCountTopic).value() should be(4)
         consumer.consume(transactionsCountTopic).value() should be(5)
+        consumer.consume(transactionsCountTopic).value() should be(3)
       }
     }
   }
