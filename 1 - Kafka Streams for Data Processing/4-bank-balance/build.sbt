@@ -11,8 +11,8 @@ libraryDependencies += "org.scalatest" %% "scalatest"   % "3.0.8" % Test
 libraryDependencies ++= (
   (version: String) =>
     Seq(
-      "org.apache.kafka"        %% "kafka-streams-scala"     % version,
-      "org.apache.kafka"        % "kafka-streams-test-utils" % version % Test,
+      "org.apache.kafka" %% "kafka-streams-scala"     % version,
+      "org.apache.kafka" % "kafka-streams-test-utils" % version % Test
     )
   )("2.3.1")
 
