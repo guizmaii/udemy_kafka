@@ -97,17 +97,13 @@ object Main extends IOApp {
   def transactionsCountStream(source: KStream[String, Message]): IO[KTable[String, Long]] =
     IO.delay { source.groupByKey.count() }
 
+  /**
+   * The specification of this stream in the course is unclear.
+   *
+   * I chose to interpret it as: keep the latest transaction timestamp
+   */
   def latestUpdateStream(source: KStream[String, Message]): IO[KTable[String, Instant]] =
-    IO.delay {
-      source.groupByKey
-        .aggregate(Instant.MIN) { (_, m, acc) =>
-          acc.compareTo(m.time) match {
-            case 0          => acc
-            case i if i < 0 => m.time
-            case i if i > 0 => acc
-          }
-        }
-    }
+    IO.delay { source.groupByKey.aggregate(null.asInstanceOf[Instant])((_, m, _) => m.time) }
 
   /**
    * I don't understand yet why but if I don't use these `Materialized.as[...]("...")` in the `.join` calls,
