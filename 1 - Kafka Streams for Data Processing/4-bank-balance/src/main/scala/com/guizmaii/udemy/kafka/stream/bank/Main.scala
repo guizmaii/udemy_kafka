@@ -63,9 +63,8 @@ object Main extends IOApp {
   val finalResultTopic       = new NewTopic("bank-balance-final-result-topic", 1, 1)
   val bootstrapServers       = BootstrapServers("localhost:9092")
 
-  import utils.CirceSerdes._
   import org.apache.kafka.streams.scala.ImplicitConversions._
-  import org.apache.kafka.streams.scala.Serdes._
+  import utils.KafkaSerdesWithCirceSerdes._
 
   val producerR: Resource[IO, ProducerApi[IO, String, Message]] =
     ProducerApi
