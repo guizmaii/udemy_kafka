@@ -1,4 +1,5 @@
-package com.guizmaii.udemy.kafka.stream.bank
+package com.guizmaii.udemy.kafka.stream.bank.utils
+
 
 import cats.effect.{ IO, Resource }
 import com.guizmaii.udemy.kafka.stream.bank.Main.config
@@ -30,32 +31,28 @@ object TestUtils {
     Resource.fromAutoCloseable(IO.delay { new TopologyTestDriver(topology, config) })
 
   trait Producer[K, V] {
-    def produce(k: K, v: V): Unit
+    def produce(topic: NewTopic)(k: K, v: V): Unit
   }
 
   trait Consumer[K, V] {
-    def consume(): ProducerRecord[K, V]
+    def consume(topic: NewTopic): ProducerRecord[K, V]
   }
 
   def testStream[InputKey: Serializer, InputValue: Serializer, OutputKey: Deserializer, OutputValue: Deserializer, T](
     topologyBuilder: StreamsBuilder => IO[Topology]
-  )(
-    inputTopic: NewTopic,
-    outputTopic: NewTopic
   )(test: (Producer[InputKey, InputValue], Consumer[OutputKey, OutputValue]) => T): T = {
     val program =
       for {
         topology <- topologyBuilder(new StreamsBuilder)
         test <- topologyTestDriverR(topology).use { testDriver =>
                  IO.delay {
-                   val factory = ConsumerRecordFactory[InputKey, InputValue](inputTopic)
-
                    val producer = new Producer[InputKey, InputValue] {
-                     override def produce(k: InputKey, v: InputValue): Unit = testDriver.pipeInput(factory.make(k, v))
+                     override def produce(topic: NewTopic)(k: InputKey, v: InputValue): Unit =
+                       testDriver.pipeInput(ConsumerRecordFactory[InputKey, InputValue](topic).make(k, v))
                    }
                    val consumer = new Consumer[OutputKey, OutputValue] {
-                     override def consume(): ProducerRecord[OutputKey, OutputValue] =
-                       testDriver.read[OutputKey, OutputValue](outputTopic)
+                     override def consume(topic: NewTopic): ProducerRecord[OutputKey, OutputValue] =
+                       testDriver.read[OutputKey, OutputValue](topic)
                    }
 
                    test(producer, consumer)

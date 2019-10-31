@@ -5,12 +5,12 @@ import java.time.Instant
 import cats.effect.IO
 import org.apache.kafka.streams.Topology
 import org.apache.kafka.streams.scala.StreamsBuilder
-import org.scalatest.{FreeSpec, Matchers}
+import org.scalatest.{ FreeSpec, Matchers }
 
 class MainTests extends FreeSpec with Matchers {
 
   import Main._
-  import TestUtils._
+  import utils.TestUtils._
   import io.circe.generic.auto._
   import org.apache.kafka.streams.scala.ImplicitConversions._
   import utils.KTableOps._
@@ -28,24 +28,23 @@ class MainTests extends FreeSpec with Matchers {
       } yield builder.build()
 
     "sums the, grouped by key, Messages amounts" in {
-      testStream(topology)(sourceTopic, sumTopic) {
-        (producer: Producer[String, Message], consumer: Consumer[String, Long]) =>
-          val key        = "key"
-          val anotherKey = "anotherKey"
-          val m_0        = Message(name = "Jules", amount = 2, time = Instant.MAX)
-          val m_1        = Message(name = "Jules", amount = 6, time = Instant.MAX)
-          val m_2        = Message(name = "Jules", amount = 3, time = Instant.MAX)
-          val m_3        = Message(name = "Jules", amount = 8, time = Instant.MAX)
+      testStream(topology) { (producer: Producer[String, Message], consumer: Consumer[String, Long]) =>
+        val key        = "key"
+        val anotherKey = "anotherKey"
+        val m_0        = Message(name = "Jules", amount = 2, time = Instant.MAX)
+        val m_1        = Message(name = "Jules", amount = 6, time = Instant.MAX)
+        val m_2        = Message(name = "Jules", amount = 3, time = Instant.MAX)
+        val m_3        = Message(name = "Jules", amount = 8, time = Instant.MAX)
 
-          producer.produce(key, m_0)
-          producer.produce(key, m_1)
-          producer.produce(anotherKey, m_2)
-          producer.produce(anotherKey, m_3)
+        producer.produce(sourceTopic)(key, m_0)
+        producer.produce(sourceTopic)(key, m_1)
+        producer.produce(sourceTopic)(anotherKey, m_2)
+        producer.produce(sourceTopic)(anotherKey, m_3)
 
-          consumer.consume().value() should be(m_0.amount)
-          consumer.consume().value() should be(m_0.amount + m_1.amount)
-          consumer.consume().value() should be(m_2.amount)
-          consumer.consume().value() should be(m_2.amount + m_3.amount)
+        consumer.consume(sumTopic).value() should be(m_0.amount)
+        consumer.consume(sumTopic).value() should be(m_0.amount + m_1.amount)
+        consumer.consume(sumTopic).value() should be(m_2.amount)
+        consumer.consume(sumTopic).value() should be(m_2.amount + m_3.amount)
       }
     }
   }
