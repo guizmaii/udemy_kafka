@@ -49,4 +49,39 @@ class MainTests extends FreeSpec with Matchers {
     }
   }
 
+  "Transaction count Stream" - {
+    def topology(builder: StreamsBuilder): IO[Topology] =
+      for {
+        source <- sourceStream(builder)
+        _      <- transactionsCountStream(source).flatMap(_.to(transactionsCountTopic))
+      } yield builder.build()
+
+    "counts the number of transactions, grouped by key" in {
+      testStream(topology) { (producer: Producer[String, Message], consumer: Consumer[String, Long]) =>
+        val key        = "key"
+        val anotherKey = "anotherKey"
+        val m_0        = Message(name = "Jules", amount = 2, time = Instant.MAX)
+        val m_1        = Message(name = "Jules", amount = 6, time = Instant.MAX)
+        val m_2        = Message(name = "Jules", amount = 3, time = Instant.MAX)
+        val m_3        = Message(name = "Jules", amount = 8, time = Instant.MAX)
+
+        producer.produce(sourceTopic)(key, m_0)
+        producer.produce(sourceTopic)(key, m_1)
+        producer.produce(sourceTopic)(anotherKey, m_2)
+        producer.produce(sourceTopic)(anotherKey, m_3)
+        producer.produce(sourceTopic)(anotherKey, m_3)
+        producer.produce(sourceTopic)(anotherKey, m_3)
+        producer.produce(sourceTopic)(anotherKey, m_3)
+
+        consumer.consume(transactionsCountTopic).value() should be(1)
+        consumer.consume(transactionsCountTopic).value() should be(2)
+        consumer.consume(transactionsCountTopic).value() should be(1)
+        consumer.consume(transactionsCountTopic).value() should be(2)
+        consumer.consume(transactionsCountTopic).value() should be(3)
+        consumer.consume(transactionsCountTopic).value() should be(4)
+        consumer.consume(transactionsCountTopic).value() should be(5)
+      }
+    }
+  }
+
 }
