@@ -1,6 +1,5 @@
 package com.guizmaii.udemy.kafka.stream.bank.utils
 
-
 import cats.effect.{ IO, Resource }
 import com.guizmaii.udemy.kafka.stream.bank.Main.config
 import org.apache.kafka.clients.admin.NewTopic
@@ -22,6 +21,10 @@ object TestUtils {
       extends AnyVal {
     def read[K: Deserializer, V: Deserializer](topic: NewTopic): ProducerRecord[K, V] =
       topologyTestDriver.readOutput(topic.name, implicitly[Deserializer[K]], implicitly[Deserializer[V]])
+  }
+
+  implicit final class ProducerRecordOps[K, V](private val record: ProducerRecord[K, V]) extends AnyVal {
+    def keyAndValue: (K, V) = record.key() -> record.value()
   }
 
   private def ConsumerRecordFactory[K: Serializer, V: Serializer](topic: NewTopic): ConsumerRecordFactory[K, V] =

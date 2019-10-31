@@ -45,7 +45,7 @@ object Main extends IOApp {
   )
 
   final case class Message(name: String, amount: Int, time: Instant)
-  final case class FinalResult(name: String, totalAmount: Long, transactionCount: Long, lastUpdated: Instant)
+  final case class FinalResult(totalAmount: Long, transactionCount: Long, lastUpdated: Instant)
 
   def newMessage(maxAmount: Int) =
     IO.delay {
@@ -131,14 +131,13 @@ object Main extends IOApp {
           Materialized.as[String, (Long, Long, Instant), ByteArrayKeyValueStore]("sum-count-lastUpdate-store")
         ) { case ((sum, count), lastUpdate) => (sum, count, lastUpdate) }
         .mapValues({
-            case (name, (sum, count, lastUpdate)) =>
+          case (sum, count, lastUpdate) =>
               FinalResult(
-                name = name,
                 totalAmount = sum,
                 transactionCount = count,
                 lastUpdated = lastUpdate
               )
-          }: (String, (Long, Long, Instant)) => FinalResult // Apparently, I need to explicitly type the anonymous function here because, without, Scala doesn't know which overloaded method it should use. Ugly.
+          }: ((Long, Long, Instant)) => FinalResult // Apparently, I need to explicitly type the anonymous function here because, without, Scala doesn't know which overloaded method it should use. Ugly.
         )
     }
 
