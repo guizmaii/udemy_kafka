@@ -1,0 +1,22 @@
+[
+  {
+      "type": "record",
+      "namespace": "com.example",
+      "name": "CustomerAddress",
+      "fields": [
+        { "name": "", "type": "" }        
+      ]
+  },
+  {
+     "type": "record",
+     "namespace": "com.example",
+     "name": "Customer",
+     "fields": [
+       { "name": "first_name", "type": "string" },
+       { "name": "last_name", "type": "string" },
+       { "name": "age", "type": "int" },
+       { "name": "height", "type": "float" },
+       { "name": "weight", "type": "float" },
+       { "name": "automated_email", "type": "boolean", "default": true }
+     ]
+}]

@@ -1,0 +1,14 @@
+We have a Customer
+First Name
+Middle Name (optional)
+Last Name
+Age
+Automated email (Boolean, default true)
+Customer Emails (array)
+CustomerAddress
+
+We have a CustomerAddress
+Address
+City
+Postcode (number or string)
+Type (Enum: PO BOX, RESIDENTIAL, ENTERPRISE)

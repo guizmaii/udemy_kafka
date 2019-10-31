@@ -1,0 +1,28 @@
+[
+  {
+      "type": "record",
+      "namespace": "com.example",
+      "name": "CustomerAddress",
+      "fields": [
+        { "name": "address", "type": "string" },
+        { "name": "city", "type": "string" },
+        { "name": "postcode", "type": ["string", "int"] },
+        { "name": "type", "type": "enum", "symbols": ["PO BOX", "RESIDENTIAL", "ENTERPRISE"] }
+      ]
+  },
+  {
+     "type": "record",
+     "namespace": "com.example",
+     "name": "Customer",
+     "fields": [
+       { "name": "first_name", "type": "string" },
+       { "name": "last_name", "type": "string" },
+       { "name": "age", "type": "int" },
+       { "name": "height", "type": "float" },
+       { "name": "weight", "type": "float" },
+       { "name": "automated_email", "type": "boolean", "default": true },
+       { "name": "customer_emails", "type": "array", "items": "string", "default": []},
+       { "name": "customer_address", "type": "com.example.CustomerAddress" },
+       { "name": "signup_ts", "type": "long", "logicalType": "timestamp-millis", "doc": "EPOCH millis Timestamp at which the user signed up "}
+     ]
+}]
