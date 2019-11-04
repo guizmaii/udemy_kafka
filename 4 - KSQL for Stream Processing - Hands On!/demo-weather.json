@@ -1,0 +1,13 @@
+{  "city": {    "name": "Sydney",    "country": "AU", "latitude":-33.8688, "longitude":151.2093 },  "description": "light rain",  "clouds": 92,  "deg": 26,  "humidity": 94,  "pressure": 1025.12,  "rain": 1.25  }
+{  "city": {    "name": "Seattle",    "country": "US", "latitude":47.6062, "longitude":-122.3321 },  "description": "heavy rain",  "clouds": 92,  "deg": 19,  "humidity": 94,  "pressure": 1025.12,  "rain": 7  }
+{  "city": {    "name": "San Francisco",    "country": "US", "latitude":37.7749, "longitude":-122.4194 },  "description": "fog",  "clouds": 92,  "deg": 19,  "humidity": 94,  "pressure": 1025.12,  "rain": 10  }
+{  "city": {    "name": "San Jose",    "country": "US", "latitude":37.3382, "longitude":-121.8863 },  "description": "light rain",  "clouds": 92,  "deg": 23,  "humidity": 94,  "pressure": 1025.12,  "rain": 3  }
+{  "city": {    "name": "Fresno",    "country": "US", "latitude":36.7378, "longitude":-119.7871 },  "description": "heavy rain",  "clouds": 92,  "deg": 22,  "humidity": 94,  "pressure": 1025.12,  "rain": 6  }
+{  "city": {    "name": "Los Angeles",    "country": "US", "latitude":34.0522, "longitude":-118.2437 },  "description": "haze",  "clouds": 92,  "deg": 19,  "humidity": 94,  "pressure": 1025.12,  "rain": 2  }
+{  "city": {    "name": "San Diego",    "country": "US", "latitude":32.7157, "longitude":-117.1611 },  "description": "fog",  "clouds": 92,  "deg": 19,  "humidity": 94,  "pressure": 1025.12,  "rain": 2  }
+{  "city": {    "name": "Birmingham",    "country": "UK", "latitude":52.4862, "longitude":-1.8904 },  "description": "light rain",  "clouds": 92,  "deg": 26,  "humidity": 94,  "pressure": 1025.12,  "rain": 4  }
+{  "city": {    "name": "London",    "country": "GB", "latitude":51.5074, "longitude":-0.1278 },  "description": "heavy rain",  "clouds": 92,  "deg": 19,  "humidity": 94,  "pressure": 1025.12,  "rain": 8  }
+{  "city": {    "name": "Manchester",    "country": "GB", "latitude":53.4808, "longitude":-2.2426 },  "description": "fog",  "clouds": 92,  "deg": 26,  "humidity": 94,  "pressure": 1025.12,  "rain": 3  }
+{  "city": {    "name": "Bristol",    "country": "GB", "latitude":51.4545, "longitude":-2.5879 },  "description": "light rain",  "clouds": 92,  "deg": 19,  "humidity": 94,  "pressure": 1025.12,  "rain": 3  }
+{  "city": {    "name": "Newcastle",    "country": "GB", "latitude":54.9783, "longitude":-1.6178 },  "description": "heavy rain",  "clouds": 92,  "deg": 19,  "humidity": 94,  "pressure": 1025.12,  "rain": 12  }
+{  "city": {    "name": "Liverpool",    "country": "GB", "latitude":53.4084, "longitude":-2.9916 },  "description": "haze",  "clouds": 92,  "deg": 23,  "humidity": 94,  "pressure": 1025.12,  "rain": 3  }

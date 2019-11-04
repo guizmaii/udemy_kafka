@@ -1,0 +1,46 @@
+-- default to beginning of time
+SET 'auto.offset.reset'='earliest';
+
+CREATE STREAM userprofile (userid INT, firstname VARCHAR, lastname VARCHAR, countrycode VARCHAR, rating DOUBLE) 
+  WITH (VALUE_FORMAT = 'JSON', KAFKA_TOPIC = 'USERPROFILE');
+
+
+-- from user_profile_pretty.ksql
+create stream user_profile_pretty as 
+select firstname || ' ' 
+|| ucase( lastname) 
+|| ' from ' || countrycode 
+|| ' has a rating of ' || cast(rating as varchar) || ' stars. ' 
+|| case when rating < 2.5 then 'Poor'
+       when rating between 2.5 and 4.2 then 'Good'
+       else 'Excellent' 
+   end as description
+from userprofile;
+
+CREATE TABLE COUNTRYTABLE  (countrycode VARCHAR, countryname VARCHAR) WITH (KAFKA_TOPIC='COUNTRY-CSV', VALUE_FORMAT='DELIMITED', KEY = 'countrycode');
+
+create stream up_joined as 
+select up.firstname 
+|| ' ' || ucase(up.lastname) 
+|| ' from ' || ct.countryname
+|| ' has a rating of ' || cast(rating as varchar) || ' stars.' as description 
+from USERPROFILE up 
+left join COUNTRYTABLE ct on ct.countrycode=up.countrycode;
+
+create stream complaints_avro with (kafka_topic='COMPLAINTS_AVRO', value_format='AVRO');
+
+create stream complaints_avro_v2 with (kafka_topic='COMPLAINTS_AVRO', value_format='AVRO');
+
+CREATE STREAM weather 
+      (city STRUCT <name VARCHAR, country VARCHAR, latitude DOUBLE, longitude DOUBLE>, 
+       description VARCHAR, 
+       clouds BIGINT, 
+       deg BIGINT, 
+       humidity BIGINT, 
+       pressure DOUBLE, 
+       rain DOUBLE) 
+WITH (KAFKA_TOPIC='WEATHERNESTED', VALUE_FORMAT='JSON');    
+
+create stream weatherraw with (value_format='AVRO') as SELECT city->name AS city_name, city->country AS city_country, city->latitude as latitude, city->longitude as longitude, description, rain from weather ;  
+
+create stream weatherrekeyed as select * from weatherraw partition by city_name;

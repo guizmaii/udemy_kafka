@@ -1,0 +1,3 @@
+{  "city": {    "name": "San Francisco",    "country": "US", "latitude":37.7749, "longitude":-122.4194 },  "description": "SUNNY",  "clouds": 92,  "deg": 19,  "humidity": 94,  "pressure": 1025.12,  "rain": 10  }
+{  "city": {    "name": "San Diego",    "country": "US", "latitude":32.7157, "longitude":-117.1611 },  "description": "SUNNY",  "clouds": 92,  "deg": 19,  "humidity": 94,  "pressure": 1025.12,  "rain": 2  }
+{  "city": {    "name": "Manchester",    "country": "GB", "latitude":53.4808, "longitude":-2.2426 },  "description": "SUNNY",  "clouds": 92,  "deg": 26,  "humidity": 94,  "pressure": 1025.12,  "rain": 3  }

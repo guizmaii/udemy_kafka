@@ -1,0 +1,19 @@
+----------------------------------------------------------------
+-- This file will generate the user_profile_pretty presentation
+----------------------------------------------------------------
+
+-- Change scope default to earliest
+SET 'auto.offset.reset'='earliest';
+
+-- Now generate 
+create stream user_profile_pretty as 
+select firstname || ' ' 
+|| ucase( lastname) 
+|| ' from ' || countrycode 
+|| ' has a rating of ' || cast(rating as varchar) || ' stars. ' 
+|| case when rating < 2.5 then 'Poor'
+       when rating between 2.5 and 4.2 then 'Good'
+       else 'Excellent' 
+   end as description
+from userprofile;
+

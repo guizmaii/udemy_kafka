@@ -1,0 +1,41 @@
+SET 'auto.offset.reset'='earliest';
+
+create table weathernow with (kafka_topic='WEATHERREKEYED', value_format='AVRO', key='CITY_NAME');  
+
+CREATE STREAM DRIVER_PROFILE (driver_name VARCHAR, countrycode VARCHAR, rating DOUBLE) 
+  WITH (VALUE_FORMAT = 'JSON', KAFKA_TOPIC = 'DRIVER_PROFILE');
+
+create stream driverprofile_rekeyed with (partitions=1) as select * from DRIVER_PROFILE partition by driver_name;  
+
+create stream rr_america_raw with (kafka_topic='riderequest-america', value_format='avro');  
+
+create stream rr_europe_raw with (kafka_topic='riderequest-europe', value_format='avro');   
+
+create stream rr_world as select 'Europe' as data_source, * from rr_europe_raw;  
+
+insert into rr_world      select 'Americas' as data_source, * from rr_america_raw;  
+
+create stream requested_journey as
+select rr.latitude as from_latitude
+, rr.longitude as from_longitude
+, rr.user
+, rr.city_name as city_name
+, w.city_country
+, w.latitude as to_latitude
+, w.longitude as to_longitude
+, w.description as weather_description
+, w.rain 
+from rr_world rr 
+left join weathernow w on rr.city_name = w.city_name;   
+
+create stream ridetodest as 
+select user
+, city_name
+, city_country
+, weather_description
+, rain 
+, GEO_DISTANCE(from_latitude, from_longitude, to_latitude, to_longitude, 'km') as dist
+from requested_journey;  
+
+
+

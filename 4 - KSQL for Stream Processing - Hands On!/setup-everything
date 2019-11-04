@@ -1,0 +1,114 @@
+#!/bin/bash
+
+export ZOOKEEPER=localhost:2181
+export KAFKA_BROKER=localhost:9092
+export DATAGEN_ITERATIONS=100
+export MAX_INTERVAL=5000
+export PID_FILE=pid_file.txt
+
+function message() {
+    echo
+    echo "*** ${1}"
+}
+
+function create_topic() {
+    TOPIC=${1}
+    PARTITIONS=${2:-1}
+    message "Creating topic ${TOPIC} with ${PARTITIONS} partitions"
+    kafka-topics --zookeeper ${ZOOKEEPER} --create --partitions ${PARTITIONS} --replication-factor 1 --topic ${TOPIC}
+}
+
+rm -f ${PID_FILE}
+
+create_topic USERPROFILE
+create_topic COUNTRY-CSV
+create_topic COMPLAINTS_AVRO
+create_topic WEATHERNESTED
+create_topic DRIVER_PROFILE 2
+
+message "Writing to topic COUNTRY-CSV"
+kafka-console-producer --broker-list ${KAFKA_BROKER} --topic COUNTRY-CSV --property "parse.key=true"  --property "key.separator=:" << EOF
+AU:AU,Australia
+IN:IN,India
+GB:GB,UK
+US:US,United States
+GB:GB,United Kingdom
+FR:FR,France
+EOF
+echo
+
+message "Writing to topic COMPLAINTS_AVRO v1"
+kafka-avro-console-producer  --broker-list ${KAFKA_BROKER} --topic COMPLAINTS_AVRO \
+--property value.schema='
+{
+  "type": "record",
+  "name": "myrecord",
+  "fields": [
+      {"name": "customer_name",  "type": "string" }
+    , {"name": "complaint_type", "type": "string" }
+    , {"name": "trip_cost", "type": "float" }
+    , {"name": "new_customer", "type": "boolean"}
+  ]
+}' << EOF
+{"customer_name":"Carol", "complaint_type":"Late arrival", "trip_cost": 19.60, "new_customer": false}
+EOF
+echo
+
+message "Writing to topic COMPLAINTS_AVRO v2"
+kafka-avro-console-producer  --broker-list ${KAFKA_BROKER} --topic COMPLAINTS_AVRO \
+--property value.schema='
+{
+  "type": "record",
+  "name": "myrecord",
+  "fields": [
+      {"name": "customer_name",  "type": "string" }
+    , {"name": "complaint_type", "type": "string" }
+    , {"name": "trip_cost", "type": "float" }
+    , {"name": "new_customer", "type": "boolean"}
+    , {"name": "number_of_rides", "type": "int", "default" : 1}
+  ]
+}' << EOF
+{"customer_name":"Ed", "complaint_type":"Dirty car", "trip_cost": 29.10, "new_customer": false, "number_of_rides": 22}
+EOF
+echo
+
+message "Writing to topic WEATHERNESTED"
+cat demo-weather.json | kafka-console-producer --broker-list ${KAFKA_BROKER} --topic WEATHERNESTED
+
+message "Writing to topic WEATHERNESTED"
+cat demo-weather-changes.json | kafka-console-producer --broker-list ${KAFKA_BROKER} --topic WEATHERNESTED  
+
+message "Writing to topic DRIVER_PROFILE"
+kafka-console-producer --broker-list ${KAFKA_BROKER} --topic DRIVER_PROFILE << EOF
+{"driver_name":"Mr. Speedy", "countrycode":"AU", "rating":2.4}
+EOF
+echo
+
+message "Starting ksql-datagen for topic USERPROFILE"
+nohup ksql-datagen schema=./datagen/userprofile.avro format=json topic=USERPROFILE key=userid maxInterval=${MAX_INTERVAL} iterations=${DATAGEN_ITERATIONS} > /dev/null 2>&1 &
+echo ${!} >> ${PID_FILE}
+
+message "Starting ksql-datagen for topic riderequest-europe"
+nohup ksql-datagen schema=./datagen/riderequest-europe.avro  format=avro topic=riderequest-europe key=rideid maxInterval=${MAX_INTERVAL} iterations=${DATAGEN_ITERATIONS} > /dev/null 2>&1 &
+echo ${!} >> ${PID_FILE}
+
+message "Starting ksql-datagen for topic riderequest-america"
+nohup ksql-datagen schema=./datagen/riderequest-america.avro format=avro topic=riderequest-america key=rideid maxInterval=${MAX_INTERVAL} iterations=${DATAGEN_ITERATIONS} > /dev/null 2>&1 &
+echo ${!} >> ${PID_FILE}
+
+message "Background jobs running - you can stop them by running this command"
+message "  kill \`cat pid_file.txt\`"
+
+if [[ ! -z "$1" && $1 == 'ksql' ]]; then
+    message "Running all KSQL setup scripts"
+
+    ksql << EOF
+    run script 'setup-everything-01.ksql';
+    exit
+EOF
+
+    ksql << EOF
+    run script 'setup-everything-02.ksql';
+    exit
+EOF
+fi

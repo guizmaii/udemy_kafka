@@ -1,0 +1,16 @@
+
+-- default to beginning of time
+SET 'auto.offset.reset'='earliest';
+
+
+-- Remove streams if they exists already
+drop stream if exists users2;
+drop stream if exists users ;
+
+-- create a stream
+create stream users (name VARCHAR, countrycode VARCHAR) 
+WITH (KAFKA_TOPIC='USERS', VALUE_FORMAT='DELIMITED');
+
+-- create another stream
+create stream users2 as select * from users;
+
