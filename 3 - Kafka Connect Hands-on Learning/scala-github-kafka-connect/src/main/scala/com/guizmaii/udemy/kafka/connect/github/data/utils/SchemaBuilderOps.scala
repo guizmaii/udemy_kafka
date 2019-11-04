@@ -22,7 +22,7 @@ private[data] object SchemaBuilderOps {
   }
 
   final object SchemaBuilderS {
-    final def apply(version: Int, name: String): SchemaBuilderS =
-      new SchemaBuilderS(SchemaBuilder.struct().name(name).version(version))
+    final def apply[T](version: Int, name: Class[T]): SchemaBuilderS =
+      new SchemaBuilderS(SchemaBuilder.struct().name(name.getCanonicalName).version(version))
   }
 }

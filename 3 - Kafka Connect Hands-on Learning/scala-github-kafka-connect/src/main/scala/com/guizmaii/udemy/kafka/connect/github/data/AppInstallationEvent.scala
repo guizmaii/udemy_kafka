@@ -51,7 +51,7 @@ object Account {
   private final val SITE_ADMIN          = "site_admin"          -> BOOLEAN_SCHEMA
 
   final val schema: SchemaBuilder =
-    SchemaBuilderS(1, "com.guizmaii.udemy.kafka.connect.github.data.Account")
+    SchemaBuilderS(1, classOf[Account])
       .field(LOGIN)
       .field(ID)
       .field(NODE_ID)
@@ -94,7 +94,7 @@ object Permissions {
   private final val PULL_REQUESTS  = "pull_requests"  -> STRING_SCHEMA
 
   final val schema: SchemaBuilder =
-    SchemaBuilderS(1, "com.guizmaii.udemy.kafka.connect.github.data.Permissions")
+    SchemaBuilderS(1, classOf[Permissions])
       .field(ADMINISTRATION)
       .field(CHECKS)
       .field(CONTENTS)
@@ -141,7 +141,7 @@ object Installation {
   private final val SINGLE_FILE_NAME     = "single_file_name"     -> STRING_SCHEMA
 
   final val schema: SchemaBuilder =
-    SchemaBuilderS(1, "com.guizmaii.udemy.kafka.connect.github.data.Installation")
+    SchemaBuilderS(1, classOf[Installation])
       .field(ID)
       .field(ACCOUNT)
       .field(REPOSITORY_SELECTION)
@@ -180,7 +180,7 @@ object Repositories {
   private final val PRIVATE   = "private"   -> BOOLEAN_SCHEMA
 
   final val schema: SchemaBuilder =
-    SchemaBuilderS(1, "com.guizmaii.udemy.kafka.connect.github.data.Repositories")
+    SchemaBuilderS(1, classOf[Repositories])
       .field(ID)
       .field(NODE_ID)
       .field(NAME)
@@ -209,7 +209,7 @@ object AppInstallationEvent {
   private final val SENDER       = "sender"       -> Account.schema
 
   final val schema: SchemaBuilder =
-    SchemaBuilderS(1, "com.guizmaii.udemy.kafka.connect.github.data.AppInstallationEvent")
+    SchemaBuilderS(1, classOf[AppInstallationEvent])
       .field(ACTION)
       .field(INSTALLATION)
       .field(REPOSITORIES)
