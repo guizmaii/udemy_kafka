@@ -5,9 +5,11 @@ import org.apache.kafka.connect.data.{ Schema, SchemaBuilder }
 private[data] object SchemaBuilderOps {
   final val ARRAY_STRING_SCHEMA = SchemaBuilder.array(Schema.STRING_SCHEMA)
 
-  final case class Field(key: String, schema: Schema)
-
-  implicit final def asField(t: (String, Schema)): Field = Field(key = t._1, schema = t._2)
+  /**
+   * An ugly hack to force the compiler to typecheck the "fields". 😅
+   */
+  final case class Field(t: (String, Schema)) extends AnyVal
+  implicit final def asField(t: (String, Schema)): Field = Field(t)
 
   /**
    * I was forced to create this wrapper because I wasn't able to enrich the Java `SchemaBuilder` class instances.
@@ -15,8 +17,8 @@ private[data] object SchemaBuilderOps {
    * I don't know why.
    */
   final class SchemaBuilderS(private val inner: SchemaBuilder) extends AnyVal {
-    final def build: SchemaBuilder            = inner
-    final def field(t: Field): SchemaBuilderS = new SchemaBuilderS(inner.field(t.key, t.schema))
+    final def build: SchemaBuilder                = inner
+    final def field(field: Field): SchemaBuilderS = new SchemaBuilderS(inner.field(field.t._1, field.t._2))
   }
 
   final object SchemaBuilderS {
