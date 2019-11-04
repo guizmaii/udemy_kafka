@@ -12,7 +12,7 @@ final class GithubSource extends SourceConnector {
 
   override def start(props: java.util.Map[String, String]): Unit = conf = GithubConnectorConfig(props)
 
-  override def taskClass(): Class[_ <: Task] = classOf[GithubTask]
+  override def taskClass(): Class[_ <: Task] = classOf[GithubSourceTask]
 
   override def taskConfigs(maxTasks: Int): util.List[util.Map[String, String]] =
     util.Arrays.asList(conf.originalsStrings())
