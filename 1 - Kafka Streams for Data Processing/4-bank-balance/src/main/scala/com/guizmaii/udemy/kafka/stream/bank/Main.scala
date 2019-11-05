@@ -44,14 +44,14 @@ object Main extends IOApp {
     "Robert"
   )
 
-  final case class Message(name: String, amount: Int, time: Instant)
+  final case class Message(name: String, amount: Long, time: Instant)
   final case class FinalResult(totalAmount: Long, transactionCount: Long, lastUpdated: Instant)
 
   def newMessage(maxAmount: Int) =
     IO.delay {
       Message(
         name = customers(Random.nextInt(customers.length)),
-        amount = Random.nextInt(maxAmount),
+        amount = Random.nextInt(maxAmount).toLong,
         time = Instant.now()
       )
     }
@@ -131,7 +131,7 @@ object Main extends IOApp {
           Materialized.as[String, (Long, Long, Instant), ByteArrayKeyValueStore]("sum-count-lastUpdate-store")
         ) { case ((sum, count), lastUpdate) => (sum, count, lastUpdate) }
         .mapValues({
-          case (sum, count, lastUpdate) =>
+            case (sum, count, lastUpdate) =>
               FinalResult(
                 totalAmount = sum,
                 transactionCount = count,
@@ -161,7 +161,9 @@ object Main extends IOApp {
         count                                            <- transactionsCountStream(source).flatMap(_.to(transactionsCountTopic))
         latest                                           <- latestUpdateStream(source).flatMap(_.to(latestUpdateTopic))
         _                                                <- finalResultStream(sum, count, latest).flatMap(_.to(finalResultTopic))
-        stream                                           <- kafkaStreamR(builder.build(), config).use(startStreams).start
+        topology                                         <- IO.delay { builder.build() }
+        _                                                <- logger.info(topology.describe().toString)
+        stream                                           <- kafkaStreamR(topology, config).use(startStreams).start
         producer <- producerR.use { producer =>
                      val produceRecords =
                        for {
